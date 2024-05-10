@@ -1,10 +1,10 @@
 conf文件文件规则如下:
 
-    预定义关键字:any ,max_coroutine,log_path等
+    预定义关键字:any ,max_coroutine,log_path,include等
     包含rules文件规则:include "规则名"
     IPv4变量定义规则:ipv4var IPv4变量名 IPv4或者IPv4网段/子网掩码位数 (IPv4采用.分10进制表示方法)
     IPv6变量定义规则:ipv6var IPv6变量名 IPv6或者IPv6网段/子网掩码位数 (IPv6采用冒号:加16进制表示)
-    端口变量定义规则:port portvar port变量名 port 或者 port数组 如[20,30]
+    端口变量定义规则:portvar port变量名 port 或者 port数组 如[20,30]
     普通变量定义规则:var 变量名 值
     变量调用规则:$变量名
     注释规则:# 注释字符串
