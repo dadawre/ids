@@ -9,28 +9,41 @@ import (
 
 // ReadConfig 读配置文件
 func ReadConfig(configPath string) {
+	// 打开文件
 	file, err := os.Open(configPath)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("无法打开文件: %v", err)
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
 
-	// 创建一个 Scanner 来逐行读取文件内容
-	scanner := bufio.NewScanner(file)
+		}
+	}(file)
 
-	// 逐行读取文件内容
-	for scanner.Scan() {
-		line := scanner.Text()
-		fmt.Println(line)
+	// 创建一个新的Reader对象
+	reader := bufio.NewReader(file)
+
+	readString, err := reader.ReadString('\n')
+	print(readString)
+
+	if err != nil {
+		return
 	}
 
-	// 检查是否有错误发生
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
+	// 如果遇到文件末尾，退出循环
+	if err != nil && err.Error() == "EOF" {
+		fmt.Println(err)
 	}
+
+	// 如果读取过程中出现错误，报错并退出
+	if err != nil {
+		log.Fatalf("读取文件出错: %v", err)
+	}
+
 }
 
-// 写文件
+// WriteToFile 写文件
 func WriteToFile(filename string, content string) error {
 	// 将字符串内容转换为字节切片
 	data := []byte(content)
