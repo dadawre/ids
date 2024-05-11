@@ -3,6 +3,9 @@ package parser
 import (
 	"bufio"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
 	"strings"
 	"unicode"
 )
@@ -32,11 +35,13 @@ const (
 
 // ConfigLexer 配置文件的词法分析器
 type ConfigLexer struct {
-	input  string        // 输入的源代码字符串
-	pos    int           // 当前位置
-	curr   rune          // 当前字符
-	reader *bufio.Reader // 用于从标准输入读取输入字符串
-	tokens []Token       // 存储词法单元的切片
+	input    string        // 输入的源代码字符串
+	pos      int           // 当前位置
+	currLine int           // 当前行
+	curr     rune          // 当前字符
+	reader   *bufio.Reader // 用于从标准输入读取输入字符串
+	file     *os.File
+	tokens   []Token // 存储词法单元的切片
 }
 
 // NextToken 获取下一个词法单元
@@ -44,17 +49,23 @@ func (l *ConfigLexer) NextToken() Token {
 	for {
 		l.readChar()
 		if unicode.IsSpace(l.curr) {
+			fmt.Println("isWhiteSpace")
 			l.skipWhitespace()
-			continue
 		}
 		if l.curr == '#' {
+			fmt.Println("isComment")
 			l.skipComment()
 			continue
 		}
-		if unicode.IsLetter(l.curr) {
+		if unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) {
+			fmt.Printf("isLetter or isDigit %c\n", l.curr)
 			return l.parseIdentifier()
 		}
+		if l.curr == '"' {
+			continue
+		}
 		if l.curr == eof {
+			defer l.file.Close()
 			return Token{Type: TokenEOF, Value: ""}
 		}
 		panic(fmt.Sprintf("无效的字符: %c", l.curr))
@@ -63,13 +74,18 @@ func (l *ConfigLexer) NextToken() Token {
 
 // 读取下一个字符
 func (l *ConfigLexer) readChar() {
+	//读取一个字符
 	ch, _, err := l.reader.ReadRune()
+
 	if err != nil {
 		l.curr = eof
+		fmt.Println(err)
 		return
 	}
 	l.curr = ch
 	l.pos++
+	//fmt.Println("letter:", l.curr, "  pos:", l.pos, "  char:", ch)
+	fmt.Printf("letter:%c  pos:%d  char:%c\n", l.curr, l.pos, ch)
 }
 
 // 跳过空白字符
@@ -88,11 +104,11 @@ func (l *ConfigLexer) skipComment() {
 
 // 解析标识符或关键字
 func (l *ConfigLexer) parseIdentifier() Token {
-	startPos := l.pos
-	for unicode.IsLetter(l.curr) {
+	startPos := l.pos - 1
+	for unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) {
 		l.readChar()
 	}
-	identifier := l.input[startPos:l.pos]
+	identifier := l.input[startPos : l.pos-1]
 	switch strings.ToLower(identifier) {
 	case "config":
 		return Token{Type: TokenKeywordConfig, Value: identifier}
@@ -121,8 +137,34 @@ type LexerInterface interface {
 }
 
 // NewConfigLexer 创建一个新的词法分析器
-func NewConfigLexer(input string) *ConfigLexer {
-	return &ConfigLexer{input: input}
+func NewConfigLexer(path string) *ConfigLexer {
+	// 打开文件
+	file, err := os.Open(path)
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return nil
+	}
+
+	// 创建bufio.Reader之前检查文件打开是否成功
+	info, err := file.Stat()
+	if err != nil {
+		fmt.Println("Error getting file info:", err)
+		return nil
+	}
+	fmt.Println(info)
+	// 文件打开成功，创建bufio.Reader
+	reader := bufio.NewReader(file)
+
+	content, err := ioutil.ReadFile(path)
+	if err != nil {
+		log.Fatal("Error reading file:", err)
+		return nil
+	}
+
+	// 将字节切片转换成字符串
+	str := string(content)
+
+	return &ConfigLexer{reader: reader, input: str}
 }
 
 // Tokenize 对输入的源代码进行词法分析，返回词法单元序列
