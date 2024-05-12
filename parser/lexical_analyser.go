@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 	"unicode"
 )
@@ -24,28 +25,46 @@ const (
 	TokenEOF            TokenType = iota // 文件结束
 	TokenIdentifier                      // 标识符
 	TokenKeywordConfig                   // 关键字 config
-	TokenKeywordInclude                  // 关键字 include
 	TokenKeywordAny                      // 关键字 any
+	TokenKeywordInclude                  // 关键字 include
 	TokenKeywordIPv4Var                  // 关键字 ipv4var
 	TokenKeywordIPv6Var                  // 关键字 ipv6var
 	TokenKeywordPortVar                  // 关键字 portvar
 	TokenKeywordVar                      // 关键字 var
-	TokenComment                         // 注释
+	TokenStringValue
+	TokenIpv4Value
+	TokenIpv4NetworkValue
+	TokenIpv6Value
+	TokenIpv6NetworkValue
+)
+
+const (
+	ipv4Pattern = `^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`
+
+	ipv6Pattern = `^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4})|(([0-9a-fA-F]{1,4}:){1,6}:([0-9a-fA-F]{1,4}:){1,6})|(([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,6})|(([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,7})|(([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,8})|(([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,9})|(([0-9a-fA-F]{1,4}:){1}(:[0-9a-fA-F]{1,4}){1,10})|(:((:[0-9a-fA-F]{1,4}){1,11}))$`
 )
 
 // ConfigLexer 配置文件的词法分析器
 type ConfigLexer struct {
-	input    string        // 输入的源代码字符串
-	pos      int           // 当前位置
-	currLine int           // 当前行
-	curr     rune          // 当前字符
-	reader   *bufio.Reader // 用于从标准输入读取输入字符串
-	file     *os.File
-	tokens   []Token // 存储词法单元的切片
+	input      string        // 输入的源代码字符串
+	pos        int           // 当前位置
+	currLine   int           // 当前行
+	curr       rune          // 当前字符
+	reader     *bufio.Reader // 用于从标准输入读取输入字符串
+	file       *os.File      // File句柄
+	CurrTokens []Token       // 存储词法单元的切片
 }
 
 // NextToken 获取下一个词法单元
 func (l *ConfigLexer) NextToken() Token {
+	if l.pos != 0 && l.curr == eof {
+		return Token{}
+	}
+	if l.pos > 0 && !unicode.IsSpace(l.curr) && l.curr != '"' && l.curr != '{' && l.curr != '}' {
+		currToken := l.parseIdentifier()
+		l.CurrTokens = append(l.CurrTokens, currToken)
+		return currToken
+	}
 	for {
 		l.readChar()
 		if unicode.IsSpace(l.curr) {
@@ -57,12 +76,14 @@ func (l *ConfigLexer) NextToken() Token {
 			l.skipComment()
 			continue
 		}
-		if unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) {
-			fmt.Printf("isLetter or isDigit %c\n", l.curr)
-			return l.parseIdentifier()
-		}
-		if l.curr == '"' {
+		if l.curr == '"' || l.curr == '=' || l.curr == '{' || l.curr == '}' {
 			continue
+		}
+		if unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) || l.curr == '$' || l.curr == '/' {
+			fmt.Printf("isLetter or isDigit %c\n", l.curr)
+			currToken := l.parseIdentifier()
+			l.CurrTokens = append(l.CurrTokens, currToken)
+			return currToken
 		}
 		if l.curr == eof {
 			defer l.file.Close()
@@ -70,6 +91,16 @@ func (l *ConfigLexer) NextToken() Token {
 		}
 		panic(fmt.Sprintf("无效的字符: %c", l.curr))
 	}
+}
+
+func (l *ConfigLexer) isSpecial(ch rune) bool {
+	specials := []rune{'{', '}', '$', '/'}
+	for _, s := range specials {
+		if ch == s {
+			return true
+		}
+	}
+	return false
 }
 
 // 读取下一个字符
@@ -84,7 +115,6 @@ func (l *ConfigLexer) readChar() {
 	}
 	l.curr = ch
 	l.pos++
-	//fmt.Println("letter:", l.curr, "  pos:", l.pos, "  char:", ch)
 	fmt.Printf("letter:%c  pos:%d  char:%c\n", l.curr, l.pos, ch)
 }
 
@@ -105,10 +135,59 @@ func (l *ConfigLexer) skipComment() {
 // 解析标识符或关键字
 func (l *ConfigLexer) parseIdentifier() Token {
 	startPos := l.pos - 1
-	for unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) {
+	havePoint := false
+	haveBias := false
+	haveColon := false
+
+	// 如果首字符为$则代表这是一个标识符
+	var haveDollar = l.curr == '$'
+	if haveDollar {
+		fmt.Println("alhgaiolhawlghagioawhgaiowghwoighagahwioghaioga")
+		l.readChar()
+		for unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) || l.curr == '_' {
+			l.readChar()
+		}
+		identifier := l.input[startPos : l.pos-1]
+		return Token{Type: TokenIdentifier, Value: identifier}
+	}
+
+	for unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) || l.curr == '.' || l.curr == '/' || l.curr == ':' || l.curr == '_' {
+		havePoint = havePoint || l.curr == '.'
+		haveBias = haveBias || l.curr == '/'
+		haveColon = haveColon || l.curr == ':'
 		l.readChar()
 	}
+
 	identifier := l.input[startPos : l.pos-1]
+
+	//如果有冒号则代表这是一个Ipv6值
+
+	// 匹配IPv6地址
+	reIPv6 := regexp.MustCompile(ipv6Pattern)
+
+	if reIPv6.MatchString(identifier) {
+		if haveBias {
+			return Token{Type: TokenIpv6Value, Value: identifier}
+		} else {
+			return Token{Type: TokenIpv6NetworkValue, Value: identifier}
+		}
+	}
+
+	// 匹配IPv4地址
+	reIPv4 := regexp.MustCompile(ipv4Pattern)
+	if reIPv4.MatchString(identifier) {
+		if haveBias {
+			return Token{Type: TokenIpv4Value, Value: identifier}
+		} else {
+			return Token{Type: TokenIpv4NetworkValue, Value: identifier}
+		}
+
+	}
+
+	if havePoint {
+		return Token{Type: TokenIpv4Value, Value: identifier}
+	}
+
 	switch strings.ToLower(identifier) {
 	case "config":
 		return Token{Type: TokenKeywordConfig, Value: identifier}
@@ -125,7 +204,13 @@ func (l *ConfigLexer) parseIdentifier() Token {
 	case "var":
 		return Token{Type: TokenKeywordVar, Value: identifier}
 	default:
+
+		CurrTokensLen := len(l.CurrTokens)
+		if CurrTokensLen != 0 && l.CurrTokens[CurrTokensLen-1].Type == TokenIdentifier {
+			return Token{Type: TokenStringValue, Value: identifier}
+		}
 		return Token{Type: TokenIdentifier, Value: identifier}
+
 	}
 }
 
@@ -163,13 +248,17 @@ func NewConfigLexer(path string) *ConfigLexer {
 
 	// 将字节切片转换成字符串
 	str := string(content)
-
-	return &ConfigLexer{reader: reader, input: str}
+	initializeTokens := make([]Token, 0, 0)
+	return &ConfigLexer{reader: reader, input: str, CurrTokens: initializeTokens}
 }
 
-// Tokenize 对输入的源代码进行词法分析，返回词法单元序列
-func (l *ConfigLexer) Tokenize() []Token {
-	l.tokens = make([]Token, 10)
-
-	return l.tokens
+// GetAllToken 对输入的源代码进行词法分析，返回词法单元序列
+func (l *ConfigLexer) GetAllToken() []Token {
+	for {
+		myToken := l.NextToken()
+		if myToken.Type == TokenEOF {
+			break
+		}
+	}
+	return l.CurrTokens
 }

@@ -1,5 +1,6 @@
 package main
 
+import _ "net/http/pprof"
 import (
 	"fmt"
 	"github.com/google/gopacket"
@@ -7,6 +8,7 @@ import (
 	"github.com/google/gopacket/pcap"
 	"graduationDesign/handler"
 	"log"
+	"net/http"
 	"strconv"
 	"time"
 )
@@ -56,6 +58,10 @@ func main() {
 		return
 	}
 	defer handle.Close() // 确保在函数结束时关闭 pcap 句柄
+
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
 
 	sourcePacket := gopacket.NewPacketSource(handle, handle.LinkType())
 

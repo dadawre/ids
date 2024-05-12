@@ -20,20 +20,20 @@ func TestConfigLexer(t *testing.T) {
 	// 创建一个bufio.Reader
 
 	myConfigLexer := parser.NewConfigLexer("../conf/ids.conf")
-	myTokens := make([]parser.Token, 1, 1)
-	myTokens = append(myTokens, myConfigLexer.NextToken())
-	myTokens = append(myTokens, myConfigLexer.NextToken())
-	myTokens = append(myTokens, myConfigLexer.NextToken())
-	myTokens = append(myTokens, myConfigLexer.NextToken())
-	myTokens = append(myTokens, myConfigLexer.NextToken())
+	//myTokens := make([]parser.Token, 0, 0)
 
-	fmt.Println(myTokens)
-	//fmt.Println("gawgagagwagwagwa")
-	//fmt.Println(myConfigLexer)
-
-	//fmt.Println(m, "  值", myConfigLexer.NextToken().Value)
-	//for myConfigLexer.NextToken().Type != parser.TokenEOF {
-	//myToken = append(myToken, myConfigLexer.NextToken())
+	//for {
+	//	myToken := myConfigLexer.NextToken()
+	//	if myToken.Type == 0 {
+	//		break
+	//	}
+	//	myTokens = append(myTokens, myToken)
 	//}
+	fmt.Println(myConfigLexer.GetAllToken())
+	fmt.Println(myConfigLexer.GetAllToken())
+	fmt.Println(myConfigLexer.GetAllToken())
+	fmt.Println(myConfigLexer.GetAllToken())
+	fmt.Println(myConfigLexer.GetAllToken())
 
+	//fmt.Println(myConfigLexer.CurrTokens)
 }
