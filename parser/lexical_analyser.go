@@ -36,6 +36,7 @@ const (
 	TokenIpv4NetworkValue
 	TokenIpv6Value
 	TokenIpv6NetworkValue
+	TokenVarUse
 )
 
 const (
@@ -79,15 +80,17 @@ func (l *ConfigLexer) NextToken() Token {
 		if l.curr == '"' || l.curr == '=' || l.curr == '{' || l.curr == '}' {
 			continue
 		}
-		if unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) || l.curr == '$' || l.curr == '/' {
+		//if unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) || l.curr == '$' || l.curr == '/' {
+		//
+		//}
+		if l.curr == eof {
+			defer l.file.Close()
+			return Token{Type: TokenEOF, Value: ""}
+		} else {
 			fmt.Printf("isLetter or isDigit %c\n", l.curr)
 			currToken := l.parseIdentifier()
 			l.CurrTokens = append(l.CurrTokens, currToken)
 			return currToken
-		}
-		if l.curr == eof {
-			defer l.file.Close()
-			return Token{Type: TokenEOF, Value: ""}
 		}
 		panic(fmt.Sprintf("无效的字符: %c", l.curr))
 	}
@@ -142,13 +145,12 @@ func (l *ConfigLexer) parseIdentifier() Token {
 	// 如果首字符为$则代表这是一个标识符
 	var haveDollar = l.curr == '$'
 	if haveDollar {
-		fmt.Println("alhgaiolhawlghagioawhgaiowghwoighagahwioghaioga")
 		l.readChar()
 		for unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) || l.curr == '_' {
 			l.readChar()
 		}
-		identifier := l.input[startPos : l.pos-1]
-		return Token{Type: TokenIdentifier, Value: identifier}
+		identifier := l.input[startPos+1 : l.pos-1]
+		return Token{Type: TokenVarUse, Value: identifier}
 	}
 
 	for unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) || l.curr == '.' || l.curr == '/' || l.curr == ':' || l.curr == '_' {
