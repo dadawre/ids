@@ -13,29 +13,39 @@ type PacketHandler struct {
 	packetChan    chan *gopacket.Packet
 	protocolMap   map[gopacket.LayerType]interface{}
 	layersContain gopacket.DecodingLayerContainer
+	eth           *layers.Ethernet
+	arp           *layers.ARP
+	ipv4          *layers.IPv4
+	ipv6          *layers.IPv6
+	icmpv4        *layers.ICMPv4
+	icmpv6        *layers.ICMPv6
+	tcp           *layers.TCP
+	udp           *layers.UDP
+	dns           *layers.DNS
 }
 
 func (p *PacketHandler) initialContainer() {
-	var eth layers.Ethernet
-	var arp layers.ARP
-	var ipv4 layers.IPv4
-	var ipv6 layers.IPv6
-	var icmpv4 layers.ICMPv4
-	var icmpv6 layers.ICMPv6
-	var tcp layers.TCP
-	var udp layers.UDP
-	var dns layers.DNS
+
+	p.eth = &layers.Ethernet{}
+	p.arp = &layers.ARP{}
+	p.ipv4 = &layers.IPv4{}
+	p.ipv6 = &layers.IPv6{}
+	p.icmpv4 = &layers.ICMPv4{}
+	p.icmpv6 = &layers.ICMPv6{}
+	p.tcp = &layers.TCP{}
+	p.udp = &layers.UDP{}
+	p.dns = &layers.DNS{}
 
 	p.layersContain = gopacket.DecodingLayerContainer(gopacket.DecodingLayerMap{})
-	p.layersContain = p.layersContain.Put(&eth)
-	p.layersContain = p.layersContain.Put(&arp)
-	p.layersContain = p.layersContain.Put(&ipv4)
-	p.layersContain = p.layersContain.Put(&ipv6)
-	p.layersContain = p.layersContain.Put(&icmpv4)
-	p.layersContain = p.layersContain.Put(&icmpv6)
-	p.layersContain = p.layersContain.Put(&udp)
-	p.layersContain = p.layersContain.Put(&tcp)
-	p.layersContain = p.layersContain.Put(&dns)
+	p.layersContain = p.layersContain.Put(p.eth)
+	p.layersContain = p.layersContain.Put(p.arp)
+	p.layersContain = p.layersContain.Put(p.ipv4)
+	p.layersContain = p.layersContain.Put(p.ipv6)
+	p.layersContain = p.layersContain.Put(p.icmpv4)
+	p.layersContain = p.layersContain.Put(p.icmpv6)
+	p.layersContain = p.layersContain.Put(p.udp)
+	p.layersContain = p.layersContain.Put(p.tcp)
+	p.layersContain = p.layersContain.Put(p.dns)
 }
 
 func (p *PacketHandler) HandlePacket() {
@@ -66,6 +76,8 @@ func (p *PacketHandler) HandlePacket() {
 				fmt.Println("this is ARP")
 			} else if layerType == layers.LayerTypeIPv4 {
 				fmt.Println("this is IPV4")
+				//fmt.Println("Src IP :", p.ipv4.SrcIP, "  Dest IP :", p.ipv4.DstIP)
+				fmt.Printf("IPv4 Source IP: %s, IPv4 Destination IP: %s\n", p.ipv4.SrcIP, p.ipv4.DstIP)
 			} else if layerType == layers.LayerTypeIPv6 {
 				fmt.Println("this is IPV6")
 			} else if layerType == layers.LayerTypeICMPv4 {

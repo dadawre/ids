@@ -40,9 +40,12 @@ const (
 )
 
 const (
+	// IPv4地址的正则表达式
 	ipv4Pattern = `^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`
 
-	ipv6Pattern = `^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4})|(([0-9a-fA-F]{1,4}:){1,6}:([0-9a-fA-F]{1,4}:){1,6})|(([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,6})|(([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,7})|(([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,8})|(([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,9})|(([0-9a-fA-F]{1,4}:){1}(:[0-9a-fA-F]{1,4}){1,10})|(:((:[0-9a-fA-F]{1,4}){1,11}))$`
+	// IPv4地址段的正则表达式
+	ipv4RangePattern = `^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/(3[0-2]|[12]?[0-9])$`
+	ipv6Pattern      = `^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4})|(([0-9a-fA-F]{1,4}:){1,6}:([0-9a-fA-F]{1,4}:){1,6})|(([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,6})|(([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,7})|(([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,8})|(([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,9})|(([0-9a-fA-F]{1,4}:){1}(:[0-9a-fA-F]{1,4}){1,10})|(:((:[0-9a-fA-F]{1,4}){1,11}))$`
 )
 
 // ConfigLexer 配置文件的词法分析器
@@ -86,12 +89,15 @@ func (l *ConfigLexer) NextToken() Token {
 		if l.curr == eof {
 			defer l.file.Close()
 			return Token{Type: TokenEOF, Value: ""}
-		} else {
+		}
+
+		if unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) || l.curr == '$' || l.curr == '/' || l.curr == '_' || l.curr == '.' {
 			fmt.Printf("isLetter or isDigit %c\n", l.curr)
 			currToken := l.parseIdentifier()
 			l.CurrTokens = append(l.CurrTokens, currToken)
 			return currToken
 		}
+
 		panic(fmt.Sprintf("无效的字符: %c", l.curr))
 	}
 }
@@ -118,7 +124,7 @@ func (l *ConfigLexer) readChar() {
 	}
 	l.curr = ch
 	l.pos++
-	fmt.Printf("letter:%c  pos:%d  char:%c\n", l.curr, l.pos, ch)
+	//fmt.Printf("letter:%c  pos:%d  char:%c\n", l.curr, l.pos, ch)
 }
 
 // 跳过空白字符
@@ -163,30 +169,30 @@ func (l *ConfigLexer) parseIdentifier() Token {
 	identifier := l.input[startPos : l.pos-1]
 
 	//如果有冒号则代表这是一个Ipv6值
+	//如果有冒号则代表这是一个Ipv6值
 
 	// 匹配IPv6地址
 	reIPv6 := regexp.MustCompile(ipv6Pattern)
 
 	if reIPv6.MatchString(identifier) {
-		if haveBias {
+		fmt.Println(identifier, "   ", haveBias)
+		if !haveBias {
 			return Token{Type: TokenIpv6Value, Value: identifier}
 		} else {
 			return Token{Type: TokenIpv6NetworkValue, Value: identifier}
 		}
 	}
 
+	reIPv4Net := regexp.MustCompile(ipv4RangePattern)
+	if reIPv4Net.MatchString(identifier) {
+		fmt.Println(identifier, "   ", haveBias)
+		return Token{Type: TokenIpv4NetworkValue, Value: identifier}
+	}
+
 	// 匹配IPv4地址
 	reIPv4 := regexp.MustCompile(ipv4Pattern)
 	if reIPv4.MatchString(identifier) {
-		if haveBias {
-			return Token{Type: TokenIpv4Value, Value: identifier}
-		} else {
-			return Token{Type: TokenIpv4NetworkValue, Value: identifier}
-		}
-
-	}
-
-	if havePoint {
+		fmt.Println(identifier, "   ", haveBias)
 		return Token{Type: TokenIpv4Value, Value: identifier}
 	}
 
