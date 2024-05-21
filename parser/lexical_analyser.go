@@ -59,43 +59,53 @@ type ConfigLexer struct {
 	CurrTokens []Token       // 存储词法单元的切片
 }
 
+type currCharError string
+
+func (e *currCharError) Error() string {
+	return fmt.Sprintf("currCharError:%s", string(*e))
+}
+
 // NextToken 获取下一个词法单元
-func (l *ConfigLexer) NextToken() Token {
+func (l *ConfigLexer) NextToken() (Token, error) {
 	if l.pos != 0 && l.curr == eof {
-		return Token{}
+		err := currCharError("curr is EOF")
+		return Token{}, &err
 	}
 	if l.pos > 0 && !unicode.IsSpace(l.curr) && l.curr != '"' && l.curr != '{' && l.curr != '}' {
 		currToken := l.parseIdentifier()
 		l.CurrTokens = append(l.CurrTokens, currToken)
-		return currToken
+		return currToken, nil
 	}
 	for {
 		l.readChar()
 		if unicode.IsSpace(l.curr) {
-			fmt.Println("isWhiteSpace")
+			//fmt.Println("isWhiteSpace")
 			l.skipWhitespace()
 		}
 		if l.curr == '#' {
-			fmt.Println("isComment")
+			//fmt.Println("isComment")
 			l.skipComment()
 			continue
 		}
 		if l.curr == '"' || l.curr == '=' || l.curr == '{' || l.curr == '}' {
 			continue
 		}
-		//if unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) || l.curr == '$' || l.curr == '/' {
-		//
-		//}
 		if l.curr == eof {
-			defer l.file.Close()
-			return Token{Type: TokenEOF, Value: ""}
+			defer func(file *os.File) {
+				err := file.Close()
+				if err != nil {
+					fmt.Println(err.Error())
+				}
+			}(l.file)
+			err := currCharError("curr is EOF")
+			return Token{Type: TokenEOF, Value: ""}, &err
 		}
 
-		if unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) || l.curr == '$' || l.curr == '/' || l.curr == '_' || l.curr == '.' {
+		if unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) || l.curr == '$' || l.curr == '/' || l.curr == '_' || l.curr == '.' || l.curr == '[' || l.curr == ']' || l.curr == ',' {
 			fmt.Printf("isLetter or isDigit %c\n", l.curr)
 			currToken := l.parseIdentifier()
 			l.CurrTokens = append(l.CurrTokens, currToken)
-			return currToken
+			return currToken, nil
 		}
 
 		panic(fmt.Sprintf("无效的字符: %c", l.curr))
@@ -103,7 +113,7 @@ func (l *ConfigLexer) NextToken() Token {
 }
 
 func (l *ConfigLexer) isSpecial(ch rune) bool {
-	specials := []rune{'{', '}', '$', '/'}
+	specials := []rune{'{', '}', '$'}
 	for _, s := range specials {
 		if ch == s {
 			return true
@@ -159,7 +169,7 @@ func (l *ConfigLexer) parseIdentifier() Token {
 		return Token{Type: TokenVarUse, Value: identifier}
 	}
 
-	for unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) || l.curr == '.' || l.curr == '/' || l.curr == ':' || l.curr == '_' {
+	for unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) || l.curr == '.' || l.curr == '/' || l.curr == ':' || l.curr == '_' || l.curr == '[' || l.curr == ']' || l.curr == ',' {
 		havePoint = havePoint || l.curr == '.'
 		haveBias = haveBias || l.curr == '/'
 		haveColon = haveColon || l.curr == ':'
@@ -167,9 +177,6 @@ func (l *ConfigLexer) parseIdentifier() Token {
 	}
 
 	identifier := l.input[startPos : l.pos-1]
-
-	//如果有冒号则代表这是一个Ipv6值
-	//如果有冒号则代表这是一个Ipv6值
 
 	// 匹配IPv6地址
 	reIPv6 := regexp.MustCompile(ipv6Pattern)
@@ -212,9 +219,9 @@ func (l *ConfigLexer) parseIdentifier() Token {
 	case "var":
 		return Token{Type: TokenKeywordVar, Value: identifier}
 	default:
-
 		CurrTokensLen := len(l.CurrTokens)
-		if CurrTokensLen != 0 && l.CurrTokens[CurrTokensLen-1].Type == TokenIdentifier {
+		if CurrTokensLen != 0 && (l.CurrTokens[CurrTokensLen-1].Type == TokenIdentifier || l.CurrTokens[CurrTokensLen-1].Type == TokenKeywordInclude ||
+			l.CurrTokens[CurrTokensLen-1].Type == TokenVarUse) {
 			return Token{Type: TokenStringValue, Value: identifier}
 		}
 		return Token{Type: TokenIdentifier, Value: identifier}
@@ -263,7 +270,7 @@ func NewConfigLexer(path string) *ConfigLexer {
 // GetAllToken 对输入的源代码进行词法分析，返回词法单元序列
 func (l *ConfigLexer) GetAllToken() []Token {
 	for {
-		myToken := l.NextToken()
+		myToken, _ := l.NextToken()
 		if myToken.Type == TokenEOF {
 			break
 		}
