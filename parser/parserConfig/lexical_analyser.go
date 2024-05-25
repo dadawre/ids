@@ -1,4 +1,4 @@
-package parser
+package parserConfig
 
 import (
 	"bufio"
@@ -102,7 +102,7 @@ func (l *ConfigLexer) NextToken() (Token, error) {
 		}
 
 		if unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) || l.curr == '$' || l.curr == '/' || l.curr == '_' || l.curr == '.' || l.curr == '[' || l.curr == ']' || l.curr == ',' {
-			fmt.Printf("isLetter or isDigit %c\n", l.curr)
+			//fmt.Printf("isLetter or isDigit %c\n", l.curr)
 			currToken := l.parseIdentifier()
 			l.CurrTokens = append(l.CurrTokens, currToken)
 			return currToken, nil
@@ -129,7 +129,7 @@ func (l *ConfigLexer) readChar() {
 
 	if err != nil {
 		l.curr = eof
-		fmt.Println(err)
+		//fmt.Println(err)
 		return
 	}
 	l.curr = ch
@@ -182,7 +182,7 @@ func (l *ConfigLexer) parseIdentifier() Token {
 	reIPv6 := regexp.MustCompile(ipv6Pattern)
 
 	if reIPv6.MatchString(identifier) {
-		fmt.Println(identifier, "   ", haveBias)
+		//fmt.Println(identifier, "   ", haveBias)
 		if !haveBias {
 			return Token{Type: TokenIpv6Value, Value: identifier}
 		} else {
@@ -192,14 +192,14 @@ func (l *ConfigLexer) parseIdentifier() Token {
 
 	reIPv4Net := regexp.MustCompile(ipv4RangePattern)
 	if reIPv4Net.MatchString(identifier) {
-		fmt.Println(identifier, "   ", haveBias)
+		//fmt.Println(identifier, "   ", haveBias)
 		return Token{Type: TokenIpv4NetworkValue, Value: identifier}
 	}
 
 	// 匹配IPv4地址
 	reIPv4 := regexp.MustCompile(ipv4Pattern)
 	if reIPv4.MatchString(identifier) {
-		fmt.Println(identifier, "   ", haveBias)
+		//fmt.Println(identifier, "   ", haveBias)
 		return Token{Type: TokenIpv4Value, Value: identifier}
 	}
 
