@@ -1,10 +1,11 @@
-package main
+package OSController
 
 import (
 	"fmt"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/mem"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -14,7 +15,7 @@ var currentPerCPUPercent []float64
 var currentTotalMemPercent = 0.0
 var currentTotalGPUPercent = 0.0
 
-func getOSStates() {
+func GetOSStates() {
 	interval := 1 * time.Second
 
 	// 获取 CPU 核心数
@@ -72,5 +73,28 @@ func getOSStates() {
 
 		// 输出 GPU 利用率
 		fmt.Println("GPU Utilization:", gpuUtilization, "%")
+	}
+}
+
+type OSType int
+
+const (
+	OSTypeWindows OSType = iota
+	OSTypeLinux
+)
+
+// GetOSType 返回运行此程序的操作系统类型，如果是非windows，linux操作系统则会返回-1
+func GetOSType() OSType {
+	os := runtime.GOOS
+	switch os {
+	case "windows":
+		fmt.Println("The operating system is Windows")
+		return OSTypeWindows
+	case "linux":
+		fmt.Println("The operating system is Linux")
+		return OSTypeLinux
+	default:
+		fmt.Printf("The operating system is %s\n", os)
+		return -1
 	}
 }
