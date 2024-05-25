@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"graduationDesign/parser/parserConfig"
+	"graduationDesign/parser"
 	"net"
 	"os"
 	"strconv"
@@ -12,35 +12,35 @@ import (
 
 func TestConfigParser(t *testing.T) {
 
-	myTokens := make([]parserConfig.Token, 0, 0)
-	myTokens = append(myTokens, parserConfig.Token{Type: parserConfig.TokenKeywordVar, Value: "var"})
-	myTokens = append(myTokens, parserConfig.Token{Type: parserConfig.TokenIdentifier, Value: "homePath"})
-	myTokens = append(myTokens, parserConfig.Token{Type: parserConfig.TokenStringValue, Value: "/home/dadawre"})
+	myTokens := make([]parser.Token, 0, 0)
+	myTokens = append(myTokens, parser.Token{Type: parser.TokenKeywordVar, Value: "var"})
+	myTokens = append(myTokens, parser.Token{Type: parser.TokenIdentifier, Value: "homePath"})
+	myTokens = append(myTokens, parser.Token{Type: parser.TokenStringValue, Value: "/home/dadawre"})
 
-	myTokens = append(myTokens, parserConfig.Token{Type: parserConfig.TokenKeywordInclude, Value: "include"})
-	myTokens = append(myTokens, parserConfig.Token{Type: parserConfig.TokenStringValue, Value: "/first"})
-	myTokens = append(myTokens, parserConfig.Token{Type: parserConfig.TokenVarUse, Value: "homePath"})
-	myTokens = append(myTokens, parserConfig.Token{Type: parserConfig.TokenStringValue, Value: "/home1111"})
+	myTokens = append(myTokens, parser.Token{Type: parser.TokenKeywordInclude, Value: "include"})
+	myTokens = append(myTokens, parser.Token{Type: parser.TokenStringValue, Value: "/first"})
+	myTokens = append(myTokens, parser.Token{Type: parser.TokenVarUse, Value: "homePath"})
+	myTokens = append(myTokens, parser.Token{Type: parser.TokenStringValue, Value: "/home1111"})
 
-	myTokens = append(myTokens, parserConfig.Token{Type: parserConfig.TokenKeywordIPv4Var, Value: "ipv4var"})
-	myTokens = append(myTokens, parserConfig.Token{Type: parserConfig.TokenIdentifier, Value: "thisNetworkIpv4"})
-	myTokens = append(myTokens, parserConfig.Token{Type: parserConfig.TokenIpv4Value, Value: "192.168.80.1"})
+	myTokens = append(myTokens, parser.Token{Type: parser.TokenKeywordIPv4Var, Value: "ipv4var"})
+	myTokens = append(myTokens, parser.Token{Type: parser.TokenIdentifier, Value: "thisNetworkIpv4"})
+	myTokens = append(myTokens, parser.Token{Type: parser.TokenIpv4Value, Value: "192.168.80.1"})
 
-	myTokens = append(myTokens, parserConfig.Token{Type: parserConfig.TokenKeywordIPv6Var, Value: "ipv6var"})
-	myTokens = append(myTokens, parserConfig.Token{Type: parserConfig.TokenIdentifier, Value: "thisNetworkIpv6"})
-	myTokens = append(myTokens, parserConfig.Token{Type: parserConfig.TokenIpv6NetworkValue, Value: "AA22:BB11:1122:CDEF:1234:AA99:7654:7410/64"})
+	myTokens = append(myTokens, parser.Token{Type: parser.TokenKeywordIPv6Var, Value: "ipv6var"})
+	myTokens = append(myTokens, parser.Token{Type: parser.TokenIdentifier, Value: "thisNetworkIpv6"})
+	myTokens = append(myTokens, parser.Token{Type: parser.TokenIpv6NetworkValue, Value: "AA22:BB11:1122:CDEF:1234:AA99:7654:7410/64"})
 
-	myTokens = append(myTokens, parserConfig.Token{Type: parserConfig.TokenKeywordPortVar, Value: "portvar"})
-	myTokens = append(myTokens, parserConfig.Token{Type: parserConfig.TokenIdentifier, Value: "httpPort"})
-	myTokens = append(myTokens, parserConfig.Token{Type: parserConfig.TokenStringValue, Value: "[80,433]"})
+	myTokens = append(myTokens, parser.Token{Type: parser.TokenKeywordPortVar, Value: "portvar"})
+	myTokens = append(myTokens, parser.Token{Type: parser.TokenIdentifier, Value: "httpPort"})
+	myTokens = append(myTokens, parser.Token{Type: parser.TokenStringValue, Value: "[80,433]"})
 
-	myTokens = append(myTokens, parserConfig.Token{Type: parserConfig.TokenKeywordConfig, Value: "config"})
-	myTokens = append(myTokens, parserConfig.Token{Type: parserConfig.TokenIdentifier, Value: "max_coroutine"})
-	myTokens = append(myTokens, parserConfig.Token{Type: parserConfig.TokenStringValue, Value: "1024"})
-	myTokens = append(myTokens, parserConfig.Token{Type: parserConfig.TokenIdentifier, Value: "min_coroutine"})
-	myTokens = append(myTokens, parserConfig.Token{Type: parserConfig.TokenStringValue, Value: "512"})
+	myTokens = append(myTokens, parser.Token{Type: parser.TokenKeywordConfig, Value: "config"})
+	myTokens = append(myTokens, parser.Token{Type: parser.TokenIdentifier, Value: "max_coroutine"})
+	myTokens = append(myTokens, parser.Token{Type: parser.TokenStringValue, Value: "1024"})
+	myTokens = append(myTokens, parser.Token{Type: parser.TokenIdentifier, Value: "min_coroutine"})
+	myTokens = append(myTokens, parser.Token{Type: parser.TokenStringValue, Value: "512"})
 
-	myConfigparser := parserConfig.NewConfigparser(&myTokens)
+	myConfigparser := parser.NewConfigparser(&myTokens)
 	fmt.Println(*(myConfigparser.Ttokens))
 
 	fmt.Println("--------------------------------------------")
@@ -153,11 +153,11 @@ func TestGrammarLexical(t *testing.T) {
 	//reader := bufio.NewReader(file)
 	// 创建一个bufio.Reader
 
-	myConfigLexer := parserConfig.NewConfigLexer("../conf/ids.conf")
+	myConfigLexer := parser.NewConfigLexer("../conf/ids.conf")
 	confTokens := myConfigLexer.GetAllToken()
 	//fmt.Println(myConfigLexer.GetAllToken())
 
-	myConfigparser := parserConfig.NewConfigparser(&confTokens)
+	myConfigparser := parser.NewConfigparser(&confTokens)
 	fmt.Println(*(myConfigparser.Ttokens))
 	myConfigparser.ParseAllTokens()
 	for _, configvar := range myConfigparser.TconfigVars {

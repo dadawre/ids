@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"graduationDesign/parser/parserConfig"
+	"graduationDesign/parser"
 	"os"
 	"testing"
 )
@@ -19,7 +19,7 @@ func TestConfigLexer(t *testing.T) {
 	//reader := bufio.NewReader(file)
 	// 创建一个bufio.Reader
 
-	myConfigLexer := parserConfig.NewConfigLexer("../conf/ids.conf")
+	myConfigLexer := parser.NewConfigLexer("../conf/ids.conf")
 	//myTokens := make([]parser.Token, 0, 0)
 
 	//for {

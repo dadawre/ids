@@ -65,8 +65,8 @@ func main() {
 
 	sourcePacket := gopacket.NewPacketSource(handle, handle.LinkType())
 
-	Channels := make([]chan *gopacket.Packet, MaxCoroutine+1, MaxCoroutine+1)
-	PacketHandlerArr = make([]*handler.PacketHandler, MaxCoroutine+1, MaxCoroutine+1)
+	Channels := make([]chan *gopacket.Packet, MaxCoroutine, MaxCoroutine+1)
+	PacketHandlerArr = make([]*handler.PacketHandler, MaxCoroutine, MaxCoroutine+1)
 
 	for i, _ := range Channels {
 		Channels[i] = make(chan *gopacket.Packet)
