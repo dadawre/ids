@@ -21,7 +21,7 @@ func TestAuxiliaryTransform(t *testing.T) {
 	//fmt.Printf("Updated string value: %s\n", b)
 
 	// 处理结构体类型指针
-	//person := &parserRuler.Person{Name: "Alice", Age: 25}
+	//person := &parserRuler.Person{NameId: "Alice", Age: 25}
 	//parserRuler.ProcessPointer(person)
 	//fmt.Printf("Updated person: %+v\n", person)
 }

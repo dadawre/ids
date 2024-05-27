@@ -22,6 +22,8 @@ type PacketHandler struct {
 	tcp           *layers.TCP
 	udp           *layers.UDP
 	dns           *layers.DNS
+	decoder       gopacket.DecodingLayerFunc
+	decoded       []gopacket.LayerType
 }
 
 func (p *PacketHandler) initialContainer() {
@@ -46,15 +48,21 @@ func (p *PacketHandler) initialContainer() {
 	p.layersContain = p.layersContain.Put(p.udp)
 	p.layersContain = p.layersContain.Put(p.tcp)
 	p.layersContain = p.layersContain.Put(p.dns)
+
+	p.decoder = p.layersContain.LayersDecoder(layers.LayerTypeEthernet, gopacket.NilDecodeFeedback)
+	p.decoded = make([]gopacket.LayerType, 0, 20)
 }
 
+func (p *PacketHandler) PayloadMatch() bool {
+	return true
+}
 func (p *PacketHandler) HandlePacket() {
 
-	decoder := p.layersContain.LayersDecoder(layers.LayerTypeEthernet, gopacket.NilDecodeFeedback)
-	decoded := make([]gopacket.LayerType, 0, 20)
+	//decoder := p.layersContain.LayersDecoder(layers.LayerTypeEthernet, gopacket.NilDecodeFeedback)
+	//decoded := make([]gopacket.LayerType, 0, 20)
 
 	for packet := range p.packetChan {
-		lt, err := decoder((*packet).Data(), &decoded)
+		lt, err := p.decoder((*packet).Data(), &p.decoded)
 
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Could not decode layers: %v\n", err)
@@ -69,7 +77,7 @@ func (p *PacketHandler) HandlePacket() {
 		}
 		fmt.Println("handlerName:" + p.handlerName)
 		//fmt.Println(decoded)
-		for _, layerType := range decoded {
+		for _, layerType := range p.decoded {
 			fmt.Println("------------------------------------------")
 			if layerType == layers.LayerTypeEthernet {
 				fmt.Println("this is Ethernet")
@@ -81,6 +89,9 @@ func (p *PacketHandler) HandlePacket() {
 				fmt.Println(p.eth.Contents) // Contents是头部的所有字节载荷
 			} else if layerType == layers.LayerTypeARP {
 				fmt.Println("this is ARP")
+				fmt.Println(p.arp.AddrType)
+				fmt.Println(p.arp.HwAddressSize)
+				fmt.Println(p.arp.ProtAddressSize)
 			} else if layerType == layers.LayerTypeIPv4 {
 				fmt.Println("this is IPV4")
 				fmt.Println(p.ipv4.SrcIP)
@@ -99,6 +110,14 @@ func (p *PacketHandler) HandlePacket() {
 				fmt.Printf("IPv4 Source IP: %s, IPv4 Destination IP: %s\n", p.ipv4.SrcIP, p.ipv4.DstIP)
 			} else if layerType == layers.LayerTypeIPv6 {
 				fmt.Println("this is IPV6")
+				fmt.Println(p.ipv6.SrcIP)
+				fmt.Println(p.ipv6.DstIP)
+				fmt.Println(p.ipv6.HopLimit)
+				fmt.Println(p.ipv6.NextHeader)
+				fmt.Println(p.ipv6.Length)
+				fmt.Println(p.ipv6.FlowLabel)
+				fmt.Println(p.ipv6.TrafficClass)
+				fmt.Println(p.ipv6.Version)
 			} else if layerType == layers.LayerTypeICMPv4 {
 				fmt.Println("this is ICMPV4")
 			} else if layerType == layers.LayerTypeICMPv6 {

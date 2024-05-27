@@ -61,21 +61,21 @@ func (rp *RuleParser) Parse() (*ruleStructure.Rule, error) {
 
 	for rp.protocolRegex.MatchString(rp.tokens[rp.pos]) {
 		protocol := rp.tokens[rp.pos]
-		p := ruleStructure.Protocol{Name: mapStrToLayerType[protocol]}
+		p := ruleStructure.Protocol{NameId: mapStrToLayerType[protocol]}
 		rp.pos++
 		for rp.pos < len(rp.tokens) && rp.fieldRegex.MatchString(rp.tokens[rp.pos]+" "+rp.tokens[rp.pos+1]) {
 			if rp.priorityRegex.MatchString(rp.tokens[rp.pos] + " " + rp.tokens[rp.pos+1]) {
 				break
 			}
-			field := MapLayerTypeTOParseType[p.Name](rp.tokens[rp.pos])
-			value, err := MapLayerTypeToParseFunc[p.Name](field, rp.tokens[rp.pos+1])
+			field := MapLayerTypeTOParseType[p.NameId](rp.tokens[rp.pos])
+			value, err := MapLayerTypeToParseFunc[p.NameId](field, rp.tokens[rp.pos+1])
 			if err != nil {
 				return nil, err
 			}
-			p.Fields = append(p.Fields, ruleStructure.Field{Name: field, Value: value})
+			p.Fields = append(p.Fields, &(ruleStructure.Field{NameId: field, ValuePtr: value}))
 			rp.pos += 2
 		}
-		result.Protocols = append(result.Protocols, p)
+		result.Protocols = append(result.Protocols, &p)
 
 		if rp.operatorRegex.MatchString(rp.tokens[rp.pos]) {
 			result.Operator = append(result.Operator, mapStrLogicToInt8[rp.tokens[rp.pos]])
@@ -109,7 +109,7 @@ func (rp *RuleParser) Parse() (*ruleStructure.Rule, error) {
 	}
 
 	for rp.stringRegex.MatchString(rp.tokens[rp.pos]) {
-		result.Strings = append(result.Strings, rp.tokens[rp.pos])
+		result.Strings = append(result.Strings, &rp.tokens[rp.pos])
 		rp.pos++
 		if rp.pos >= len(rp.tokens) || (rp.pos < len(rp.tokens) && rp.protocolRegex.MatchString(rp.tokens[rp.pos])) {
 			if ((result.Msg != "" && result.Action != PassAction && result.Action != 0) || result.Action == PassAction) && len(result.Protocols) == len(result.Operator)+1 && result.Priority != 0 {

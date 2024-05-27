@@ -1,6 +1,7 @@
 package parserRuler
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/google/gopacket"
@@ -8,8 +9,20 @@ import (
 	"graduationDesign/parser/parserConfig"
 	"net"
 	"strconv"
+	"strings"
 )
 
+func stringToUint32(s string) (uint32, error) {
+	// 将字符串转换为uint64，第二个参数是进制，第三个参数是位大小
+	u64, err := strconv.ParseUint(s, 10, 32)
+	if err != nil {
+		return 0, err
+	}
+	// 将uint64转换为uint32
+	return uint32(u64), nil
+}
+
+// mapStrToLayerType 协议字符串到协议标识符的映射
 var mapStrToLayerType = map[string]gopacket.LayerType{
 	"Eth":  layers.LayerTypeEthernet,
 	"IPv4": layers.LayerTypeIPv4,
@@ -20,12 +33,13 @@ var mapStrToLayerType = map[string]gopacket.LayerType{
 
 const (
 	AndOperator = iota + 1
-	ArOperator
+	OrOperator
 )
 
+// mapStrLogicToInt8 逻辑运算符字符串到int8的映射
 var mapStrLogicToInt8 = map[string]int8{
 	"&": AndOperator,
-	"|": ArOperator,
+	"|": OrOperator,
 }
 
 const (
@@ -36,6 +50,7 @@ const (
 	DropAction
 )
 
+// mapStringToAction 行动字符到行动标识符的映射
 var mapStringToAction = map[string]int8{
 	"pass":   PassAction,
 	"record": RecordAction,
@@ -44,19 +59,24 @@ var mapStringToAction = map[string]int8{
 	"drop":   DropAction,
 }
 
-// MapLayerTypeToParseFunc 定义协议标识符到字段标识符的映射
+// MapLayerTypeToParseFunc 定义协议标识符到协议字段解析函数的映射
 var MapLayerTypeToParseFunc = map[gopacket.LayerType]func(fieldType int8, str string) (interface{}, error){
 	layers.LayerTypeEthernet: parseEthFieldValue,
 	layers.LayerTypeIPv4:     parseIPv4FieldValue,
 	layers.LayerTypeTCP:      parseTCPFieldValue,
 	layers.LayerTypeUDP:      parseUDPFieldValue,
+	layers.LayerTypeIPv6:     parseIPv6FieldValue,
+	layers.LayerTypeARP:      parseARPFieldValue,
 }
 
+// MapLayerTypeTOParseType 协议标识符到协议字段标识符解析函数
 var MapLayerTypeTOParseType = map[gopacket.LayerType]func(fieldName string) int8{
 	layers.LayerTypeEthernet: parseEthType,
 	layers.LayerTypeIPv4:     parseIPv4Type,
 	layers.LayerTypeTCP:      parseTcpType,
 	layers.LayerTypeUDP:      parseUDPType,
+	layers.LayerTypeIPv6:     parseIPv6Type,
+	layers.LayerTypeARP:      parseARPType,
 }
 
 type ParseFieldError string
@@ -97,15 +117,26 @@ func parseEthFieldValue(fieldType int8, str string) (interface{}, error) {
 			fmt.Printf("Failed to parse MAC address: %v\n", err)
 			return nil, err
 		}
-		return mac, nil
-	case EthTypeField, EthLengthField:
+		return &mac, nil
+	case EthLengthField:
 		// 将整数字符串转换为 int 类型
 		num, err := strconv.Atoi(str)
 		if err != nil {
 			fmt.Printf("Failed to convert string to int: %v\n", err)
 			return nil, err
 		}
-		return num, nil
+		num16 := uint16(num)
+		return num16, nil
+	case EthTypeField:
+		// 将整数字符串转换为 int 类型
+		num, err := strconv.Atoi(str)
+		if err != nil {
+			fmt.Printf("Failed to convert string to int: %v\n", err)
+			return nil, err
+		}
+		num16 := uint16(num)
+		ethType := layers.EthernetType(num16)
+		return ethType, nil
 	default:
 		return nil, ParseFieldError("ETH fieldTypeError")
 	}
@@ -289,13 +320,13 @@ func parseTCPFieldValue(fieldType int8, str string) (interface{}, error) {
 		return tcpPort, nil
 
 	case TCPAckSeqField, TCPSequenceField:
-		num, err := strconv.Atoi(str)
+		num, err := stringToUint32(str)
 		if err != nil {
 			fmt.Printf("Failed to convert string to int: %v\n", err)
 			return nil, err
 		}
-		num32 := uint32(num)
-		return num32, nil
+		//num32 := uint32(num)
+		return num, nil
 
 	case TCPAckField, TCPSynField, TCPUrgField, TCPPstField, TCPFinField, TCPRstField:
 		if str == "1" {
@@ -374,5 +405,210 @@ func parseUDPFieldValue(fieldType int8, str string) (interface{}, error) {
 	default:
 		return nil, ParseFieldError("UDP fieldTypeError")
 	}
+}
 
+const (
+	IPv6DstField = iota + 1
+	IPv6SrcField
+	IPv6HopLimitField
+	IPv6NextHeadField
+	IPv6LengthField
+	IPv6FlowLabelField
+	IPv6TrafficClassField
+	IPv6VersionField
+)
+
+func parseIPv6Type(fieldName string) int8 {
+	switch fieldName {
+	case "dst":
+		return IPv6DstField
+	case "src":
+		return IPv6SrcField
+	case "hlimit":
+		return IPv6HopLimitField
+	case "nexthead":
+		return IPv6NextHeadField
+	case "length":
+		return IPv6LengthField
+	case "label":
+		return IPv6FlowLabelField
+	case "class":
+		return IPv6TrafficClassField
+	case "version":
+		return IPv6VersionField
+	default:
+		return -1
+	}
+}
+
+func parseIPv6FieldValue(fieldType int8, str string) (interface{}, error) {
+	switch fieldType {
+	case IPv6DstField, IPv6SrcField:
+		ipNet, err := parserConfig.IPStringToIPNet(str, false)
+		if err != nil {
+			return nil, err
+		}
+		return ipNet, nil
+
+	case IPv6VersionField, IPv6TrafficClassField, IPv6HopLimitField:
+		num, err := strconv.Atoi(str)
+		if err != nil {
+			fmt.Printf("Failed to convert string to int: %v\n", err)
+			return nil, err
+		}
+		num8 := uint8(num)
+		return num8, nil
+
+	case IPv6FlowLabelField:
+		num, err := stringToUint32(str)
+		if err != nil {
+			fmt.Printf("Failed to convert string to int: %v\n", err)
+			return nil, err
+		}
+		//num32 := uint32(num)
+		return num, nil
+
+	case IPv6LengthField:
+		num, err := strconv.Atoi(str)
+		if err != nil {
+			fmt.Printf("Failed to convert string to int: %v\n", err)
+			return nil, err
+		}
+		num16 := uint16(num)
+		return num16, nil
+
+	case IPv6NextHeadField:
+		num, err := strconv.Atoi(str)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			return nil, err
+		}
+		// 将 int 类型转换为 int8 类型
+		num8 := uint8(num)
+		ipv4protocol := layers.IPProtocol(num8)
+		return ipv4protocol, nil
+
+	default:
+		return nil, ParseFieldError("UDP fieldTypeError")
+	}
+}
+
+const (
+	ARPTypeField = iota + 1
+	ARPProtocolField
+	ARPHwAddressSizeField
+	ARPProtocolAddressSizeField
+	ARPOptionField
+	ARPSourceHwAddressField
+	ARPSourceProtocolAddressField
+	ARPDestHwAddressField
+	ARPDestProtocolAddressField
+)
+
+func parseARPType(fieldName string) int8 {
+	switch fieldName {
+	case "type":
+		return ARPTypeField
+	case "protocol":
+		return ARPProtocolField
+	case "hsize":
+		return ARPHwAddressSizeField
+	case "psize":
+		return ARPProtocolAddressSizeField
+	case "option":
+		return ARPOptionField
+	case "shaddress":
+		return ARPSourceHwAddressField
+	case "spaddress":
+		return ARPSourceProtocolAddressField
+	case "dhaddress":
+		return ARPDestHwAddressField
+	case "dpaddress":
+		return ARPDestProtocolAddressField
+	default:
+		return -1
+	}
+}
+
+// ParseIPString parses an IP string and returns the corresponding byte array.
+func ParseIPString(ipStr string) ([]byte, error) {
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return nil, fmt.Errorf("invalid IP address: %s", ipStr)
+	}
+	// IPv4 addresses are 4 bytes, IPv6 are 16 bytes.
+	if ipv4 := ip.To4(); ipv4 != nil {
+		return ipv4, nil
+	}
+	return ip.To16(), nil
+}
+
+// ParseMACString parses a MAC address string and returns the corresponding byte array.
+func ParseMACString(macStr string) ([]byte, error) {
+	macStr = strings.ToLower(macStr)
+	macStr = strings.ReplaceAll(macStr, ":", "")
+	macStr = strings.ReplaceAll(macStr, "-", "")
+	mac, err := hex.DecodeString(macStr)
+	if err != nil || len(mac) != 6 {
+		return nil, fmt.Errorf("invalid MAC address: %s", macStr)
+	}
+	return mac, nil
+}
+
+func parseARPFieldValue(fieldType int8, str string) (interface{}, error) {
+	switch fieldType {
+	case ARPTypeField:
+		num, err := strconv.Atoi(str)
+		if err != nil {
+			fmt.Printf("Failed to convert string to int: %v\n", err)
+			return nil, err
+		}
+		num8 := uint8(num)
+		linkType := layers.LinkType(num8)
+		return linkType, nil
+
+	case ARPProtocolField:
+		num, err := strconv.Atoi(str)
+		if err != nil {
+			fmt.Printf("Failed to convert string to int: %v\n", err)
+			return nil, err
+		}
+		num16 := uint16(num)
+		EthType := layers.EthernetType(num16)
+		return EthType, nil
+
+	case ARPHwAddressSizeField, ARPProtocolAddressSizeField:
+		num, err := strconv.Atoi(str)
+		if err != nil {
+			fmt.Printf("Failed to convert string to int: %v\n", err)
+			return nil, err
+		}
+		num8 := uint8(num)
+		return num8, nil
+
+	case ARPOptionField:
+		num, err := strconv.Atoi(str)
+		if err != nil {
+			fmt.Printf("Failed to convert string to int: %v\n", err)
+			return nil, err
+		}
+		num16 := uint16(num)
+		return num16, nil
+	case ARPSourceHwAddressField, ARPDestHwAddressField:
+		mac, err := ParseMACString(str)
+		if err != nil {
+			return nil, err
+		}
+		return mac, nil
+
+	case ARPSourceProtocolAddressField, ARPDestProtocolAddressField:
+		ip, err := ParseIPString(str)
+		if err != nil {
+			return nil, err
+		}
+		return ip, nil
+
+	default:
+		return nil, ParseFieldError("UDP fieldTypeError")
+	}
 }

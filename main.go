@@ -24,7 +24,7 @@ func getAllNetworkDev() {
 
 	// 打印可用的网络接口
 	for _, device := range devices {
-		fmt.Println("Name:", device.Name)
+		fmt.Println("NameId:", device.Name)
 		fmt.Println("Description:", device.Description)
 		fmt.Println("Addresses:", device.Addresses)
 		fmt.Println()
@@ -83,4 +83,5 @@ func main() {
 			Channels[IPFlowHash%MaxCoroutine] <- &packet
 		}
 	}
+
 }

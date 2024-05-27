@@ -6,23 +6,23 @@ import (
 )
 
 type Protocol struct {
-	Name   gopacket.LayerType
-	Fields []Field
+	NameId gopacket.LayerType
+	Fields []*Field
 }
 
 type Field struct {
-	Name  int8
-	Value interface{}
+	NameId   int8
+	ValuePtr interface{}
 }
 
 type Rule struct {
 	ID        int
-	Protocols []Protocol
+	Protocols []*Protocol
 	Operator  []int8
 	Priority  int
 	Action    int8
 	Msg       string
-	Strings   []string
+	Strings   []*string
 }
 
 // RuleNode 代表链表中的一个节点
