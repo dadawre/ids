@@ -49,12 +49,14 @@ var MapLayerTypeToParseFunc = map[gopacket.LayerType]func(fieldType int8, str st
 	layers.LayerTypeEthernet: parseEthFieldValue,
 	layers.LayerTypeIPv4:     parseIPv4FieldValue,
 	layers.LayerTypeTCP:      parseTCPFieldValue,
+	layers.LayerTypeUDP:      parseUDPFieldValue,
 }
 
 var MapLayerTypeTOParseType = map[gopacket.LayerType]func(fieldName string) int8{
 	layers.LayerTypeEthernet: parseEthType,
 	layers.LayerTypeIPv4:     parseIPv4Type,
 	layers.LayerTypeTCP:      parseTcpType,
+	layers.LayerTypeUDP:      parseUDPType,
 }
 
 type ParseFieldError string
@@ -157,7 +159,6 @@ func parseIPv4Type(fieldName string) int8 {
 }
 
 func parseIPv4FieldValue(fieldType int8, str string) (interface{}, error) {
-	fmt.Println(fieldType, "   ", str)
 	switch fieldType {
 	case IPv4SrcIPField, IPv4DstIPField:
 		ipNet, err := parserConfig.IPStringToIPNet(str, false)
@@ -324,6 +325,54 @@ func parseTCPFieldValue(fieldType int8, str string) (interface{}, error) {
 		return num8, nil
 
 	default:
-		return nil, ParseFieldError("ETH fieldTypeError")
+		return nil, ParseFieldError("TCP fieldTypeError")
 	}
+}
+
+const (
+	UDPSrcField = iota + 1
+	UDPDstField
+	UDPLengthField
+	UDPChecksumField
+)
+
+func parseUDPType(fieldName string) int8 {
+	switch fieldName {
+	case "src":
+		return UDPSrcField
+	case "dst":
+		return UDPDstField
+	case "length":
+		return UDPLengthField
+	case "checksum":
+		return UDPChecksumField
+	default:
+		return -1
+	}
+}
+
+func parseUDPFieldValue(fieldType int8, str string) (interface{}, error) {
+	switch fieldType {
+	case UDPSrcField, UDPDstField:
+		port, err := strconv.Atoi(str)
+		if err != nil {
+			return 0, errors.New("invalid port: not a number")
+		}
+		udpPort := layers.UDPPort(port)
+		if err = Validate(layers.TCPPort(udpPort)); err != nil {
+			return nil, err
+		}
+		return udpPort, nil
+	case UDPLengthField, UDPChecksumField:
+		num, err := strconv.Atoi(str)
+		if err != nil {
+			fmt.Printf("Failed to convert string to int: %v\n", err)
+			return nil, err
+		}
+		num16 := uint16(num)
+		return num16, nil
+	default:
+		return nil, ParseFieldError("UDP fieldTypeError")
+	}
+
 }

@@ -27,3 +27,4 @@ rule支持协议:
     MAC协议支持字段名 src,dst,length,type
     IPv4协议支持字段名 src,dst,checksum,protocol,TTL,offset,flags,id,length,TOS,IHL,version
     TCP协议支持字段名 src,dst,seq,seqack,offset,URG,ACK,PSH,RST,SYN,FIN,window,checksum,urgptr
+    UDP协议支持字段名 src,dst,length,checksum

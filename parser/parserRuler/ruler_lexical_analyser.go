@@ -1,33 +1,15 @@
 package parserRuler
 
 import (
-	"github.com/google/gopacket"
+	"graduationDesign/structure/ruleStructure"
 	"regexp"
 	"strconv"
 	"strings"
 )
 
-type Protocol struct {
-	Name   gopacket.LayerType
-	Fields []Field
-}
-
-type Field struct {
-	Name  int8
-	Value interface{}
-}
-
-type Rule struct {
-	Protocols []Protocol
-	Operator  []int8
-	Priority  int
-	Action    int8
-	Msg       string
-	Strings   []string
-}
-
 type RuleParser struct {
-	Rules         []*Rule
+	curRule       int
+	RuleLIST      ruleStructure.RuleLinkedList
 	pos           int
 	ruleStr       string
 	tokens        []string
@@ -58,11 +40,11 @@ func NewRuleParser(ruleStr string) *RuleParser {
 		actionRegex:   regexp.MustCompile(`action (pass|record|alert|send|drop)`),
 		msgRegex:      regexp.MustCompile(`msg:"([^"]*)"`),
 		stringRegex:   regexp.MustCompile(`\b\w+\b`),
-		Rules:         make([]*Rule, 0, 0),
+		//RuleLIST:      make([]*Rule, 0, 0),
 	}
 }
 
-func (rp *RuleParser) Parse() (*Rule, error) {
+func (rp *RuleParser) Parse() (*ruleStructure.Rule, error) {
 	var err error
 	if rp.pos >= len(rp.tokens) {
 		err = RuleParserError("parsing completed")
@@ -73,14 +55,13 @@ func (rp *RuleParser) Parse() (*Rule, error) {
 	//for index, token := range rp.tokens {
 	//	fmt.Println(index, "  ", token)
 	//}
-	result := &Rule{}
+	result := &ruleStructure.Rule{}
 
 	//for rp.pos < len(rp.tokens) {
 
 	for rp.protocolRegex.MatchString(rp.tokens[rp.pos]) {
 		protocol := rp.tokens[rp.pos]
-		p := Protocol{Name: mapStrToLayerType[protocol]}
-
+		p := ruleStructure.Protocol{Name: mapStrToLayerType[protocol]}
 		rp.pos++
 		for rp.pos < len(rp.tokens) && rp.fieldRegex.MatchString(rp.tokens[rp.pos]+" "+rp.tokens[rp.pos+1]) {
 			if rp.priorityRegex.MatchString(rp.tokens[rp.pos] + " " + rp.tokens[rp.pos+1]) {
@@ -91,7 +72,7 @@ func (rp *RuleParser) Parse() (*Rule, error) {
 			if err != nil {
 				return nil, err
 			}
-			p.Fields = append(p.Fields, Field{Name: field, Value: value})
+			p.Fields = append(p.Fields, ruleStructure.Field{Name: field, Value: value})
 			rp.pos += 2
 		}
 		result.Protocols = append(result.Protocols, p)
@@ -132,6 +113,8 @@ func (rp *RuleParser) Parse() (*Rule, error) {
 		rp.pos++
 		if rp.pos >= len(rp.tokens) || (rp.pos < len(rp.tokens) && rp.protocolRegex.MatchString(rp.tokens[rp.pos])) {
 			if ((result.Msg != "" && result.Action != PassAction && result.Action != 0) || result.Action == PassAction) && len(result.Protocols) == len(result.Operator)+1 && result.Priority != 0 {
+				result.ID = rp.curRule
+				rp.curRule++
 				return result, nil
 			} else {
 				err = RuleParserError("something is invalid value")
@@ -148,14 +131,16 @@ func (rp *RuleParser) Parse() (*Rule, error) {
 	//return result, nil
 }
 
-func (rp *RuleParser) GetAllRule() (*[]*Rule, error) {
+func (rp *RuleParser) GetAllRule() (*ruleStructure.RuleLinkedList, error) {
 	var err error
-	var rule *Rule
+	var rule *ruleStructure.Rule
 	for rule, err = rp.Parse(); err == nil; rule, err = rp.Parse() {
-		rp.Rules = append(rp.Rules, rule)
+		//rp.RuleLIST = append(rp.RuleLIST, rule)
+		//fmt.Println(rule)
+		rp.RuleLIST.Insert(rule)
 	}
 	if err == nil || (err != nil && err.Error() == "parsing completed") {
-		return &rp.Rules, nil
+		return &rp.RuleLIST, nil
 	}
 	return nil, err
 }

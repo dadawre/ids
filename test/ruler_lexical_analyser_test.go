@@ -70,17 +70,27 @@ func TestLexical(t *testing.T) {
 		fmt.Println("Error parsing rule:", err)
 		return
 	}
-	//fmt.Println((*result))
-	for index, rule := range *result {
-		fmt.Println(index)
-		fmt.Println(rule.Msg)
-		fmt.Println(rule.Action)
-		fmt.Println(rule.Priority)
-		fmt.Println(rule.Operator)
-		fmt.Println(rule.Protocols)
-		fmt.Println(rule.Strings)
+	for node := result.GetHead(); node != nil; node = node.Next {
+		fmt.Println(node.RuleValue.ID)
+		fmt.Println(node.RuleValue.Msg)
+		fmt.Println(node.RuleValue.Action)
+		fmt.Println(node.RuleValue.Priority)
+		fmt.Println(node.RuleValue.Operator)
+		fmt.Println(node.RuleValue.Protocols)
+		fmt.Println(node.RuleValue.Strings)
 		fmt.Println("--------------------------------")
 	}
+	//fmt.Println((*result))
+	//for index, rule := range *result {
+	//	fmt.Println(index)
+	//	fmt.Println(rule.Msg)
+	//	fmt.Println(rule.Action)
+	//	fmt.Println(rule.Priority)
+	//	fmt.Println(rule.Operator)
+	//	fmt.Println(rule.Protocols)
+	//	fmt.Println(rule.Strings)
+	//	fmt.Println("--------------------------------")
+	//}
 
 	//fmt.Printf("Parsed Rule: %+v\n", result)
 }

@@ -122,6 +122,10 @@ func (p *PacketHandler) HandlePacket() {
 				fmt.Println(p.tcp.Options)
 			} else if layerType == layers.LayerTypeUDP {
 				fmt.Println("this is UDP")
+				fmt.Println(p.udp.SrcPort)
+				fmt.Println(p.udp.DstPort)
+				fmt.Println(p.udp.Length)
+				fmt.Println(p.udp.Checksum)
 			} else if layerType == layers.LayerTypeDNS {
 				fmt.Println("this is DNS")
 			} else {
