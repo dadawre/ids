@@ -1,3 +1,7 @@
-IPv4 src 192.168.1.1 dest 192.168.80.0 TTL 128 & TCP dst 80 | UDP dst 8080 priority 10 action pass msg:"Connection allowed%c%c" note1 note2
-IPv4 src 192.168.1.1 dest 192.168.80.0 TTL 128 & TCP dst 80 | UDP dst 8080 priority 10 action drop msg:"Connection allowed%c%c" note2 note3
+IPv4 src 192.168.1.1 dst 192.168.80.0/24 TTL 128 priority 10 action pass msg:"Connection allowed%c%c" note1 note2
+Eth src 11:22:33:44:55:66 priority 100 action drop msg:"Connection allowed%c%c" note2 afojgagwgwapkha
+
+IPv4 src 192.168.1.1 dst 192.168.80.0 TTL 128
+& TCP dst 443 priority 10  action drop msg:"Connection allowed%c%c" note2 note3
+
 

@@ -17,7 +17,13 @@ conf文件文件规则如下:
 
 rules文件规则如下: 
     
-    首先协议执行操作有:放行(PASS，不会有日志)，记录(RECORD，将数据包记录到普通日志中)，
-    告警(ALARM 将数据包记录到紧急日志中,并产生告警)，发送给总部(SEND 并记录到发送日志中)，
-    丢弃(DROP 丢弃数据包并记录到紧急日志中)
-    协议名 {协议字段名 协议字段值} {&| | |~ 协议名 协议字段名 协议字段值} priority 优先级(优先级越高，越后执行) action 执行操作 [msg:"日志字符串"] 
+    首先协议执行操作有:放行(pass，不会有日志)，记录(record，将数据包记录到普通日志中)，
+    告警(alert 将数据包记录到紧急日志中,并产生告警)，发送给总部(send 并记录到发送日志中)，
+    丢弃(drop 丢弃数据包并记录到紧急日志中)
+    协议名 {协议字段名 协议字段值} {&| | |~ 协议名 协议字段名 协议字段值} priority 优先级(优先级越高，越后执行,优先级值范围为0~65535) action 执行操作 [msg:"日志字符串"] 
+
+rule支持协议:
+    
+    MAC协议支持字段名 src,dst,length,type
+    IPv4协议支持字段名 src,dst,checksum,protocol,TTL,offset,flags,id,length,TOS,IHL,version
+    TCP协议支持字段名 src,dst,seq,seqack,offset,URG,ACK,PSH,RST,SYN,FIN,window,checksum,urgptr

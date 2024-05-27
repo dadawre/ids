@@ -9,6 +9,50 @@ import (
 	"testing"
 )
 
+func TestAuxiliaryTransform(t *testing.T) {
+	// 处理 int 类型指针
+	//var a int = 10
+	//parserRuler.ProcessPointer(&a)
+	//fmt.Printf("Updated int value: %d\n", a)
+	//
+	// 处理 string 类型指针
+	//var b string = "initial"
+	//parserRuler.ProcessPointer(&b)
+	//fmt.Printf("Updated string value: %s\n", b)
+
+	// 处理结构体类型指针
+	//person := &parserRuler.Person{Name: "Alice", Age: 25}
+	//parserRuler.ProcessPointer(person)
+	//fmt.Printf("Updated person: %+v\n", person)
+}
+
+func TestAuxiliaryT(t *testing.T) {
+	// 示例使用
+	//var a int = 42
+	//var b string = "Hello"
+	//var c []int = []int{1, 2, 3}
+	//var d map[string]int = map[string]int{"one": 1, "two": 2, "three": 3}
+	//
+	//// 获取接口的原始类型
+	//typA := parserRuler.GetOriginalType(a)
+	//typB := parserRuler.GetOriginalType(b)
+	//typC := parserRuler.GetOriginalType(c)
+	//typD := parserRuler.GetOriginalType(d)
+	//
+	//// 转换为原始类型
+	//originalA := parserRuler.ConvertToOriginalType(typA)
+	//originalB := parserRuler.ConvertToOriginalType(typB)
+	//originalC := parserRuler.ConvertToOriginalType(typC)
+	//originalD := parserRuler.ConvertToOriginalType(typD)
+	//
+	//// 打印转换后的值
+	//fmt.Printf("Original type of a: %T\n", originalA)
+	//fmt.Println(originalA)
+	//fmt.Printf("Original type of b: %T\n", originalB)
+	//fmt.Printf("Original type of c: %T\n", originalC)
+	//fmt.Printf("Original type of d: %T\n", originalD)
+}
+
 func TestLexical(t *testing.T) {
 	content, err := ioutil.ReadFile("../rulers/myruler")
 	if err != nil {

@@ -70,12 +70,31 @@ func (p *PacketHandler) HandlePacket() {
 		fmt.Println("handlerName:" + p.handlerName)
 		//fmt.Println(decoded)
 		for _, layerType := range decoded {
+			fmt.Println("------------------------------------------")
 			if layerType == layers.LayerTypeEthernet {
 				fmt.Println("this is Ethernet")
+				fmt.Println(p.eth.EthernetType)
+				fmt.Println(p.eth.Length)
+				fmt.Println(p.eth.SrcMAC)
+				fmt.Println(p.eth.DstMAC)
+				fmt.Println(p.eth.Payload)  // Payload是除去头部的所有字节载荷
+				fmt.Println(p.eth.Contents) // Contents是头部的所有字节载荷
 			} else if layerType == layers.LayerTypeARP {
 				fmt.Println("this is ARP")
 			} else if layerType == layers.LayerTypeIPv4 {
 				fmt.Println("this is IPV4")
+				fmt.Println(p.ipv4.SrcIP)
+				fmt.Println(p.ipv4.DstIP)
+				fmt.Println(p.ipv4.Checksum)
+				fmt.Println(p.ipv4.Protocol)
+				fmt.Println(p.ipv4.TTL)
+				fmt.Println(p.ipv4.FragOffset)
+				fmt.Println(p.ipv4.Flags)
+				fmt.Println(p.ipv4.Id)
+				fmt.Println(p.ipv4.Length)
+				fmt.Println(p.ipv4.TOS)
+				fmt.Println(p.ipv4.IHL)
+				fmt.Println(p.ipv4.Version)
 				//fmt.Println("Src IP :", p.ipv4.SrcIP, "  Dest IP :", p.ipv4.DstIP)
 				fmt.Printf("IPv4 Source IP: %s, IPv4 Destination IP: %s\n", p.ipv4.SrcIP, p.ipv4.DstIP)
 			} else if layerType == layers.LayerTypeIPv6 {
@@ -86,6 +105,21 @@ func (p *PacketHandler) HandlePacket() {
 				fmt.Println("this is ICMPV6")
 			} else if layerType == layers.LayerTypeTCP {
 				fmt.Println("this is TCP")
+				fmt.Println(p.tcp.SrcPort)
+				fmt.Println(p.tcp.DstPort)
+				fmt.Println(p.tcp.Seq)
+				fmt.Println(p.tcp.Ack)
+				fmt.Println(p.tcp.DataOffset)
+				fmt.Println(p.tcp.URG)
+				fmt.Println(p.tcp.ACK)
+				fmt.Println(p.tcp.PSH)
+				fmt.Println(p.tcp.RST)
+				fmt.Println(p.tcp.SYN)
+				fmt.Println(p.tcp.FIN)
+				fmt.Println(p.tcp.Window)
+				fmt.Println(p.tcp.Checksum)
+				fmt.Println(p.tcp.Urgent)
+				fmt.Println(p.tcp.Options)
 			} else if layerType == layers.LayerTypeUDP {
 				fmt.Println("this is UDP")
 			} else if layerType == layers.LayerTypeDNS {
