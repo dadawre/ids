@@ -205,7 +205,6 @@ func parseIPv4FieldValue(fieldType int8, str string) (interface{}, error) {
 			return nil, err
 		}
 
-		// 将 int 类型转换为 int8 类型
 		num8 := uint8(num)
 		return num8, nil
 	case IPv4FlagField:

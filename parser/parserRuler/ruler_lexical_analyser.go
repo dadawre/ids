@@ -9,7 +9,6 @@ import (
 
 type RuleParser struct {
 	curRule       int
-	RuleLIST      ruleStructure.RuleLinkedList
 	pos           int
 	ruleStr       string
 	tokens        []string
@@ -20,6 +19,12 @@ type RuleParser struct {
 	actionRegex   *regexp.Regexp
 	msgRegex      *regexp.Regexp
 	stringRegex   *regexp.Regexp
+}
+
+func (rp *RuleParser) Refresh(ruleStr string) {
+	rp.ruleStr = ruleStr
+	rp.tokens = strings.Fields(ruleStr)
+	rp.pos = 0
 }
 
 type RuleParserError string
@@ -131,16 +136,17 @@ func (rp *RuleParser) Parse() (*ruleStructure.Rule, error) {
 	//return result, nil
 }
 
-func (rp *RuleParser) GetAllRule() (*ruleStructure.RuleLinkedList, error) {
+func (rp *RuleParser) GetAllRule(r *ruleStructure.RuleLinkedList) error {
 	var err error
 	var rule *ruleStructure.Rule
 	for rule, err = rp.Parse(); err == nil; rule, err = rp.Parse() {
 		//rp.RuleLIST = append(rp.RuleLIST, rule)
 		//fmt.Println(rule)
-		rp.RuleLIST.Insert(rule)
+		//rp.RuleLIST.Insert(rule)
+		r.Insert(rule)
 	}
 	if err == nil || (err != nil && err.Error() == "parsing completed") {
-		return &rp.RuleLIST, nil
+		return nil
 	}
-	return nil, err
+	return err
 }

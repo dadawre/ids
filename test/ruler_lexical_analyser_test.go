@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"graduationDesign/parser/parserRuler"
+	"graduationDesign/structure/ruleStructure"
 	"io/ioutil"
 	"log"
 	"strings"
@@ -62,14 +63,24 @@ func TestLexical(t *testing.T) {
 
 	rule := string(content)
 	//strField := strings.Fields(rule)
-
+	fmt.Println(rule)
 	//rule := `IPv4 src 192.168.1.1 dest 192.168.80.0 TTL 128 & TCP dst 80 | UDP dst 8080 priority 10 action pass msg:"Connection allowed%c%c" note1 note2`
 	parser := parserRuler.NewRuleParser(rule)
-	result, err := parser.GetAllRule()
+	result := ruleStructure.RuleLinkedList{}
+
+	err = parser.GetAllRule(&result)
 	if err != nil {
 		fmt.Println("Error parsing rule:", err)
 		return
 	}
+
+	parser.Refresh(rule)
+	err = parser.GetAllRule(&result)
+	if err != nil {
+		fmt.Println("Error parsing rule:", err)
+		return
+	}
+
 	for node := result.GetHead(); node != nil; node = node.Next {
 		fmt.Println(node.RuleValue.ID)
 		fmt.Println(node.RuleValue.Msg)

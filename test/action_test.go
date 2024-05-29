@@ -1,14 +1,14 @@
 package main
 
 import (
-	"graduationDesign/action"
+	"graduationDesign/ruleAction"
 	"log"
 	"sync"
 	"testing"
 )
 
 func TestSendMail(t *testing.T) {
-	mail := &(action.MailSetting{})
+	mail := &(ruleAction.MailSetting{})
 	mail = mail.SetSmtpHost("smtp.qq.com").SetSmtpPort("587").SetToEmail("2939188260@qq.com")
 	mail = mail.SetAuthEmail("112724772@qq.com").SetAuthPassword("bcernpppsoejbifi")
 	mail = mail.SetSubject("Subject: 测试邮件\n").SetBody("这是通过Go语言发送的测试邮件。")
@@ -19,7 +19,7 @@ func TestSendMail(t *testing.T) {
 }
 
 func TestWriteFile(t *testing.T) {
-	action.AppendWriteFile("./test.txt", "大大大大大大发发生飞洒飞洒发生大2")
+	ruleAction.AppendWriteFile("./test.txt", "大大大大大大发发生飞洒飞洒发生大2")
 }
 
 func TestTCP(t *testing.T) {
@@ -27,7 +27,7 @@ func TestTCP(t *testing.T) {
 	wg.Add(1)
 	// Example usage
 	go func() {
-		if err := action.ReceiveData("9999"); err != nil {
+		if err := ruleAction.ReceiveData("9999"); err != nil {
 			log.Fatalf("Server error: %v", err)
 		}
 	}()
@@ -39,7 +39,7 @@ func TestTCP(t *testing.T) {
 		"float":  3.14,
 	}
 
-	if err := action.SendData("192.168.0.209:9999", data); err != nil {
+	if err := ruleAction.SendData("192.168.0.209:9999", data); err != nil {
 		log.Fatalf("Client error: %v", err)
 	}
 

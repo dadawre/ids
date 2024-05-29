@@ -10,12 +10,12 @@ import (
 type Configparser struct {
 	Ttokens               *[]Token
 	curr                  int
-	TconfigVars           []*configVar
+	TconfigVars           []*ConfigVar
 	TincludePath          []*string
-	TConfigMapNameToValue map[string]interface{}
+	TConfigMapNameToValue map[string]string
 }
 
-type configVar struct {
+type ConfigVar struct {
 	Ttoken *Token
 	Tname  string
 	Tvalue interface{}
@@ -24,8 +24,8 @@ type configVar struct {
 func NewConfigparser(tokens *[]Token) *Configparser {
 	newConfigParser := Configparser{Ttokens: tokens}
 	newConfigParser.TincludePath = make([]*string, 0, 0)
-	newConfigParser.TconfigVars = make([]*configVar, 0, 0)
-	newConfigParser.TConfigMapNameToValue = make(map[string]interface{}, 0)
+	newConfigParser.TconfigVars = make([]*ConfigVar, 0, 0)
+	newConfigParser.TConfigMapNameToValue = make(map[string]string, 0)
 	return &newConfigParser
 }
 
@@ -106,8 +106,8 @@ func (c *Configparser) parseConfig() (bool, error) {
 	return true, nil
 }
 
-func (c *Configparser) parseKeywordVar() *configVar {
-	NewConfigVar := configVar{}
+func (c *Configparser) parseKeywordVar() *ConfigVar {
+	NewConfigVar := ConfigVar{}
 	NewConfigVar.Ttoken = &((*c.Ttokens)[c.curr])
 
 	c.curr++
@@ -139,7 +139,7 @@ func (c *Configparser) parseInclude() *string {
 				curString += currToken.Value
 			} else {
 				for _, currConfigVar := range c.TconfigVars {
-					if currConfigVar.Ttoken.Type == TokenKeywordVar || currConfigVar.Ttoken.Value == currToken.Value {
+					if currConfigVar.Ttoken.Type == TokenKeywordVar && currConfigVar.Tname == currToken.Value {
 						curString += currConfigVar.Tvalue.(string)
 					}
 				}
@@ -203,8 +203,8 @@ func IPStringToIPNet(ipStr string, isIpv4 bool) (*net.IPNet, error) {
 	return ipNet, nil
 }
 
-func (c *Configparser) parserKeywordIp(isIpv4 bool) *configVar {
-	NewConfigVar := configVar{}
+func (c *Configparser) parserKeywordIp(isIpv4 bool) *ConfigVar {
+	NewConfigVar := ConfigVar{}
 	NewConfigVar.Ttoken = &((*c.Ttokens)[c.curr])
 
 	c.curr++
@@ -253,8 +253,8 @@ func StrToArr(arrStr string) []int {
 	return result
 }
 
-func (c *Configparser) parserKeywordPort() *configVar {
-	NewConfigVar := configVar{}
+func (c *Configparser) parserKeywordPort() *ConfigVar {
+	NewConfigVar := ConfigVar{}
 	NewConfigVar.Ttoken = &((*c.Ttokens)[c.curr])
 
 	c.curr++

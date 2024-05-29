@@ -1,6 +1,12 @@
 package main
 
-import _ "net/http/pprof"
+import (
+	"graduationDesign/parser/parserConfig"
+	"graduationDesign/parser/parserRuler"
+	"graduationDesign/structure/ruleStructure"
+	"io/ioutil"
+	_ "net/http/pprof"
+)
 import (
 	"fmt"
 	"github.com/google/gopacket"
@@ -13,8 +19,70 @@ import (
 	"time"
 )
 
-var MaxCoroutine uint64 = 1024
+var MaxCoroutine int = 1024
 var PacketHandlerArr []*handler.PacketHandler
+
+var ConfigPath = "./conf/ids.conf"
+var ConfigVars []*parserConfig.ConfigVar
+var IncludePath []*string
+var ConfigMapNameToValue map[string]string
+
+var MapVariableNameToVariable = map[string]interface{}{
+	"max_coroutine": &MaxCoroutine,
+}
+
+var LISTRules *ruleStructure.RuleLinkedList
+
+func InitializeConfig() {
+	myConfigLexer := parserConfig.NewConfigLexer(ConfigPath)
+	confTokens := myConfigLexer.GetAllToken()
+
+	myConfigparser := parserConfig.NewConfigparser(&confTokens)
+
+	myConfigparser.ParseAllTokens()
+
+	ConfigVars = myConfigparser.TconfigVars
+
+	IncludePath = myConfigparser.TincludePath
+
+	ConfigMapNameToValue = myConfigparser.TConfigMapNameToValue
+}
+
+func InitializeRules() {
+	LISTRules = &ruleStructure.RuleLinkedList{}
+	parser := parserRuler.NewRuleParser("")
+	for index := range IncludePath {
+		content, err := ioutil.ReadFile(*(IncludePath[index]))
+		if err != nil {
+			log.Fatal("Error reading file:", err)
+			//return nil
+		}
+
+		rule := string(content)
+		parser.Refresh(rule)
+		err = parser.GetAllRule(LISTRules)
+
+		if err != nil {
+			fmt.Println("Error parsing rule:", err)
+			return
+		}
+	}
+}
+
+func InitializeVariable() {
+	for key, value := range ConfigMapNameToValue {
+		//fmt.Println(key, "   ", value)
+		if MapVariableNameToVariable[key] != nil {
+			// 使用 strconv.Atoi 将字符串转换为 int
+			num, err := strconv.Atoi(value)
+			if err == nil {
+				*(MapVariableNameToVariable[key].(*int)) = num
+			} else {
+				*(MapVariableNameToVariable[key]).(*string) = value
+			}
+		}
+	}
+}
 
 func getAllNetworkDev() {
 	devices, err := pcap.FindAllDevs() //获取所有网络接口
@@ -32,6 +100,9 @@ func getAllNetworkDev() {
 }
 
 func main() {
+	InitializeConfig()
+	InitializeRules()
+	InitializeVariable()
 	//go getOSStates()
 	//getAllNetworkDev()
 	//handle, err := pcap.OpenLive("\\Device\\NPF_{8809DE90-DC4E-4E82-8495-740651F390A5}", 65536, true, pcap.BlockForever)
@@ -70,7 +141,7 @@ func main() {
 
 	for i, _ := range Channels {
 		Channels[i] = make(chan *gopacket.Packet)
-		PacketHandlerArr[i] = handler.NewHandlerPacket(Channels[i], "coroutine"+strconv.Itoa(i))
+		PacketHandlerArr[i] = handler.NewHandlerPacket(Channels[i], "coroutine"+strconv.Itoa(i), LISTRules)
 		PacketHandlerArr[i].StartHandle()
 	}
 
@@ -80,7 +151,7 @@ func main() {
 		if networkLayerType != false {
 			IPFlow := packet.NetworkLayer().NetworkFlow()
 			IPFlowHash := IPFlow.FastHash()
-			Channels[IPFlowHash%MaxCoroutine] <- &packet
+			Channels[IPFlowHash%uint64(MaxCoroutine)] <- &packet
 		}
 	}
 

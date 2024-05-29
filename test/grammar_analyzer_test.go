@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"graduationDesign/parser/parserConfig"
 	"net"
-	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -138,17 +137,17 @@ func TestStrToArr(t *testing.T) {
 
 func TestGrammarLexical(t *testing.T) {
 	// 打开文件
-	file, err := os.Open("../conf/ids.conf")
-	if err != nil {
-		fmt.Println("Error opening file:", err)
-		return
-	}
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			err.Error()
-		}
-	}(file)
+	//file, err := os.Open("../conf/ids.conf")
+	//if err != nil {
+	//	fmt.Println("Error opening file:", err)
+	//	return
+	//}
+	//defer func(file *os.File) {
+	//	err := file.Close()
+	//	if err != nil {
+	//		err.Error()
+	//	}
+	//}(file)
 
 	//reader := bufio.NewReader(file)
 	// 创建一个bufio.Reader

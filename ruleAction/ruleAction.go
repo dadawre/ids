@@ -1,44 +1,45 @@
-package action
+package ruleAction
 
-import "fmt"
+import (
+	"fmt"
+	"graduationDesign/structure/ruleStructure"
+)
 
 var ReceivePacketCount = 0
 
-// PacketAction 定义数据包操作的枚举类型
-type PacketAction int
-
 const (
-	PacketPassAction PacketAction = iota + 1
+	PacketPassAction = iota + 1
 	PacketRecordAction
 	PacketAlertAction
 	PacketSendAction
 	PacketDropAction
 )
 
-func passPacket(...interface{}) {
+func PassPacket(rule *ruleStructure.Rule) {
 	ReceivePacketCount++
+	fmt.Println("Passing packet  ", ReceivePacketCount)
 }
 
 // 定义每个枚举值对应的函数
-func recordPacket(...interface{}) {
+func recordPacket(rule *ruleStructure.Rule) {
 	fmt.Println("Recording packet")
 }
 
-func alertPacket(...interface{}) {
+func alertPacket(rule *ruleStructure.Rule) {
 	fmt.Println("Alerting packet")
 }
 
-func sendPacket(...interface{}) {
+func sendPacket(rule *ruleStructure.Rule) {
 	fmt.Println("Sending packet")
 }
 
-func dropPacket(...interface{}) {
+func dropPacket(rule *ruleStructure.Rule) {
 	fmt.Println("Dropping packet")
 }
 
 // 创建一个map，将枚举值映射到对应的函数
-var packetActionMap = map[PacketAction]func(...interface{}){
-	PacketPassAction:   passPacket,
+var PacketActionMap = map[int8]func(rule *ruleStructure.Rule){
+	PacketPassAction:   PassPacket,
 	PacketRecordAction: recordPacket,
 	PacketAlertAction:  alertPacket,
 	PacketSendAction:   sendPacket,
