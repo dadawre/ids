@@ -1,4 +1,4 @@
-package ruleAction
+package handler
 
 import (
 	"bufio"
@@ -84,6 +84,15 @@ func (s *MailSetting) SendMail() error {
 	}
 
 	fmt.Println("邮件发送成功")
+	return nil
+}
+
+func CreateFile(dirPath string) error {
+	// 创建文件夹
+	err := os.MkdirAll(dirPath, os.ModePerm)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

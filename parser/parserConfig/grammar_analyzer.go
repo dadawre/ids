@@ -10,7 +10,7 @@ import (
 type Configparser struct {
 	Ttokens               *[]Token
 	curr                  int
-	TconfigVars           []*ConfigVar
+	TconfigVars           map[string]*ConfigVar
 	TincludePath          []*string
 	TConfigMapNameToValue map[string]string
 }
@@ -24,7 +24,7 @@ type ConfigVar struct {
 func NewConfigparser(tokens *[]Token) *Configparser {
 	newConfigParser := Configparser{Ttokens: tokens}
 	newConfigParser.TincludePath = make([]*string, 0, 0)
-	newConfigParser.TconfigVars = make([]*ConfigVar, 0, 0)
+	newConfigParser.TconfigVars = make(map[string]*ConfigVar, 0)
 	newConfigParser.TConfigMapNameToValue = make(map[string]string, 0)
 	return &newConfigParser
 }
@@ -54,28 +54,32 @@ func (c *Configparser) ParseSelect() error {
 			err := ParseError("something is wrong with parse var")
 			return &err
 		}
-		c.TconfigVars = append(c.TconfigVars, configvar)
+		//c.TconfigVars = append(c.TconfigVars, configvar)
+		c.TconfigVars[configvar.Tname] = configvar
 	} else if (*c.Ttokens)[c.curr].Type == TokenKeywordIPv4Var {
 		IPValue := c.parserKeywordIp(true)
 		if IPValue == nil {
 			err := ParseError("something is wrong with parse ipv4")
 			return &err
 		}
-		c.TconfigVars = append(c.TconfigVars, IPValue)
+		//c.TconfigVars = append(c.TconfigVars, IPValue)
+		c.TconfigVars[IPValue.Tname] = IPValue
 	} else if (*c.Ttokens)[c.curr].Type == TokenKeywordIPv6Var {
 		IPValue := c.parserKeywordIp(false)
 		if IPValue == nil {
 			err := ParseError("something is wrong with parse ipv6")
 			return &err
 		}
-		c.TconfigVars = append(c.TconfigVars, IPValue)
+		//c.TconfigVars = append(c.TconfigVars, IPValue)
+		c.TconfigVars[IPValue.Tname] = IPValue
 	} else if (*c.Ttokens)[c.curr].Type == TokenKeywordPortVar {
 		portArray := c.parserKeywordPort()
 		if portArray == nil {
 			err := ParseError("something is wrong with parse port")
 			return &err
 		}
-		c.TconfigVars = append(c.TconfigVars, portArray)
+		//c.TconfigVars = append(c.TconfigVars, portArray)
+		c.TconfigVars[portArray.Tname] = portArray
 	} else if (*c.Ttokens)[c.curr].Type == TokenKeywordConfig {
 		c.curr++
 		var err error

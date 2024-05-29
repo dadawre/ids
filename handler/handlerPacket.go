@@ -1,18 +1,19 @@
 package handler
 
 import (
+	"fmt"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
-	"graduationDesign/ruleAction"
 	"graduationDesign/ruleMatch"
 	"graduationDesign/structure/ruleStructure"
 )
 
+var LogPath string
+
 type PacketHandler struct {
-	handlerName string
-	isStart     bool
-	packetChan  chan *gopacket.Packet
-	//protocolMap   map[gopacket.LayerType]interface{}
+	handlerName                     string
+	isStart                         bool
+	packetChan                      chan *gopacket.Packet
 	layersContain                   gopacket.DecodingLayerContainer
 	eth                             *layers.Ethernet
 	arp                             *layers.ARP
@@ -28,6 +29,7 @@ type PacketHandler struct {
 	ruleLinkedList                  *ruleStructure.RuleLinkedList
 	MapLayerTypeToProtocolStructure map[gopacket.LayerType]interface{}
 	RuleBools                       []bool
+	PacketActionMap                 map[int8]func(rule *ruleStructure.Rule)
 }
 
 func (p *PacketHandler) initialContainer() {
@@ -64,40 +66,36 @@ func (p *PacketHandler) initialContainer() {
 		layers.LayerTypeTCP:      p.tcp,
 		layers.LayerTypeUDP:      p.udp,
 	}
-	p.RuleBools = make([]bool, 20, 20)
-}
+	p.RuleBools = make([]bool, 10, 10)
 
-func (p *PacketHandler) ClearProtocolStructure() {
-	for _, layerType := range p.decoded {
-		if layerType == layers.LayerTypeEthernet {
-			p.eth = &layers.Ethernet{}
-		} else if layerType == layers.LayerTypeARP {
-			p.arp = &layers.ARP{}
-		} else if layerType == layers.LayerTypeIPv4 {
-			p.ipv4 = &layers.IPv4{}
-		} else if layerType == layers.LayerTypeIPv6 {
-			p.ipv6 = &layers.IPv6{}
-		} else if layerType == layers.LayerTypeTCP {
-			p.tcp = &layers.TCP{}
-		} else if layerType == layers.LayerTypeUDP {
-			p.udp = &layers.UDP{}
-		}
+	// PacketActionMap 创建一个map，将枚举值映射到对应的函数
+	p.PacketActionMap = map[int8]func(rule *ruleStructure.Rule){
+		PacketPassAction:   p.PassPacket,
+		PacketRecordAction: p.recordPacket,
+		PacketAlertAction:  p.alertPacket,
+		PacketSendAction:   p.sendPacket,
+		PacketDropAction:   p.dropPacket,
 	}
 }
 
 func (p *PacketHandler) PayloadMatch() {
 	for node := p.ruleLinkedList.GetHead(); node != nil; node = node.Next {
 		for index, protocol := range node.RuleValue.Protocols {
-			p.RuleBools[index] = ruleMatch.MapLayerTypeToMatchFunc[protocol.NameId](protocol, p.MapLayerTypeToProtocolStructure[protocol.NameId])
-			logic, _ := ruleMatch.ExecuteLogic(p.RuleBools, node.RuleValue.Operator)
-			if logic {
-				p.ClearProtocolStructure()
-				ruleAction.PacketActionMap[node.RuleValue.Action](node.RuleValue)
+			for indexProtocol := range p.decoded {
+				if protocol.NameId == p.decoded[indexProtocol] {
+					p.RuleBools[index] = ruleMatch.MapLayerTypeToMatchFunc[protocol.NameId](protocol, p.MapLayerTypeToProtocolStructure[protocol.NameId])
+				}
 			}
 		}
+		logic, _ := ruleMatch.ExecuteLogic(p.RuleBools, node.RuleValue.Operator)
+
+		if logic {
+			fmt.Println(p.RuleBools, "    ", node.RuleValue.Operator)
+			p.PacketActionMap[node.RuleValue.Action](node.RuleValue)
+			return
+		}
 	}
-	ruleAction.PassPacket(nil)
-	p.ClearProtocolStructure()
+	p.PassPacket(nil)
 }
 
 func (p *PacketHandler) HandlePacket() {
@@ -107,6 +105,7 @@ func (p *PacketHandler) HandlePacket() {
 
 	for packet := range p.packetChan {
 		p.decoder((*packet).Data(), &p.decoded)
+		fmt.Println(p.decoded)
 		p.PayloadMatch()
 	}
 }

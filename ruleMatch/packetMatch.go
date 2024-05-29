@@ -24,7 +24,7 @@ func ExecuteLogic(bools []bool, operators []int8) (bool, error) {
 	andProcessed := []bool{bools[0]}
 	andOps := []int8{}
 	for i := 0; i < len(operators); i++ {
-		if operators[i] == 0 {
+		if operators[i] == 1 {
 			andProcessed[len(andProcessed)-1] = andProcessed[len(andProcessed)-1] && bools[i+1]
 		} else {
 			andProcessed = append(andProcessed, bools[i+1])
@@ -35,7 +35,7 @@ func ExecuteLogic(bools []bool, operators []int8) (bool, error) {
 	// Step 2: Process all || operators
 	result := andProcessed[0]
 	for i := 0; i < len(andOps); i++ {
-		if andOps[i] == 1 {
+		if andOps[i] == 2 {
 			result = result || andProcessed[i+1]
 		} else {
 			return false, fmt.Errorf("invalid operator after && processing: %s", andOps[i])

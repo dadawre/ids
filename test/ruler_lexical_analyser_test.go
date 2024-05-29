@@ -63,23 +63,37 @@ func TestLexical(t *testing.T) {
 
 	rule := string(content)
 	//strField := strings.Fields(rule)
-	fmt.Println(rule)
+	//fmt.Println(rule)
 	//rule := `IPv4 src 192.168.1.1 dest 192.168.80.0 TTL 128 & TCP dst 80 | UDP dst 8080 priority 10 action pass msg:"Connection allowed%c%c" note1 note2`
-	parser := parserRuler.NewRuleParser(rule)
+	parser := parserRuler.NewRuleParser(rule, nil)
 	result := ruleStructure.RuleLinkedList{}
 
+	for index, token := range parser.Tokens {
+		fmt.Println(index, "    ", token)
+	}
+
 	err = parser.GetAllRule(&result)
 	if err != nil {
 		fmt.Println("Error parsing rule:", err)
 		return
 	}
 
-	parser.Refresh(rule)
-	err = parser.GetAllRule(&result)
-	if err != nil {
-		fmt.Println("Error parsing rule:", err)
-		return
+	//content, err = ioutil.ReadFile("../rulers/backrule")
+	//if err != nil {
+	//	log.Fatal("Error reading file:", err)
+	//	//return nil
+	//}
+	//
+	//rule = string(content)
+	//
+	//parser.Refresh(rule)
+	//parser.GetAllRule(&result)
+
+	for index, token := range parser.Tokens {
+		fmt.Println(index, "    ", token)
 	}
+
+	fmt.Println("--------------------------------")
 
 	for node := result.GetHead(); node != nil; node = node.Next {
 		fmt.Println(node.RuleValue.ID)

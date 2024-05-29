@@ -23,10 +23,10 @@ var MaxCoroutine int = 1024
 var PacketHandlerArr []*handler.PacketHandler
 
 var ConfigPath = "./conf/ids.conf"
-var ConfigVars []*parserConfig.ConfigVar
+var ConfigVars map[string]*parserConfig.ConfigVar
 var IncludePath []*string
 var ConfigMapNameToValue map[string]string
-
+var LogPath = "./log"
 var MapVariableNameToVariable = map[string]interface{}{
 	"max_coroutine": &MaxCoroutine,
 }
@@ -50,7 +50,7 @@ func InitializeConfig() {
 
 func InitializeRules() {
 	LISTRules = &ruleStructure.RuleLinkedList{}
-	parser := parserRuler.NewRuleParser("")
+	parser := parserRuler.NewRuleParser("", ConfigVars)
 	for index := range IncludePath {
 		content, err := ioutil.ReadFile(*(IncludePath[index]))
 		if err != nil {
@@ -82,6 +82,7 @@ func InitializeVariable() {
 			}
 		}
 	}
+	handler.LogPath = LogPath
 }
 
 func getAllNetworkDev() {

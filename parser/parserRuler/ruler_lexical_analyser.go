@@ -1,6 +1,8 @@
 package parserRuler
 
 import (
+	"fmt"
+	"graduationDesign/parser/parserConfig"
 	"graduationDesign/structure/ruleStructure"
 	"regexp"
 	"strconv"
@@ -11,7 +13,7 @@ type RuleParser struct {
 	curRule       int
 	pos           int
 	ruleStr       string
-	tokens        []string
+	Tokens        []string
 	protocolRegex *regexp.Regexp
 	fieldRegex    *regexp.Regexp
 	operatorRegex *regexp.Regexp
@@ -19,11 +21,13 @@ type RuleParser struct {
 	actionRegex   *regexp.Regexp
 	msgRegex      *regexp.Regexp
 	stringRegex   *regexp.Regexp
+	msgEndRegex   *regexp.Regexp
+	ConfigVarsMap map[string]*parserConfig.ConfigVar
 }
 
 func (rp *RuleParser) Refresh(ruleStr string) {
 	rp.ruleStr = ruleStr
-	rp.tokens = strings.Fields(ruleStr)
+	rp.Tokens = strings.Fields(ruleStr)
 	rp.pos = 0
 }
 
@@ -33,90 +37,103 @@ func (e RuleParserError) Error() string {
 	return string(e)
 }
 
-func NewRuleParser(ruleStr string) *RuleParser {
+func NewRuleParser(ruleStr string, configVar map[string]*parserConfig.ConfigVar) *RuleParser {
 	return &RuleParser{
 		pos:           0,
 		ruleStr:       ruleStr,
-		tokens:        strings.Fields(ruleStr),
+		Tokens:        strings.Fields(ruleStr),
 		protocolRegex: regexp.MustCompile(`\b(Eth|IPv4|IPv6|TCP|UDP)\b`),
 		fieldRegex:    regexp.MustCompile(`\b(\w+)\b \b(\w+)\b`),
 		operatorRegex: regexp.MustCompile(`[&|]`),
 		priorityRegex: regexp.MustCompile(`priority (\d+)`),
 		actionRegex:   regexp.MustCompile(`action (pass|record|alert|send|drop)`),
 		msgRegex:      regexp.MustCompile(`msg:"([^"]*)"`),
+		msgEndRegex:   regexp.MustCompile(`"$`),
 		stringRegex:   regexp.MustCompile(`\b\w+\b`),
-		//RuleLIST:      make([]*Rule, 0, 0),
+		ConfigVarsMap: configVar,
 	}
 }
 
 func (rp *RuleParser) Parse() (*ruleStructure.Rule, error) {
 	var err error
-	if rp.pos >= len(rp.tokens) {
+	if rp.pos >= len(rp.Tokens) {
 		err = RuleParserError("parsing completed")
 		return nil, err
 	}
 
-	//tokens := strings.Fields(rp.ruleStr)
-	//for index, token := range rp.tokens {
-	//	fmt.Println(index, "  ", token)
-	//}
 	result := &ruleStructure.Rule{}
 
-	//for rp.pos < len(rp.tokens) {
-
-	for rp.protocolRegex.MatchString(rp.tokens[rp.pos]) {
-		protocol := rp.tokens[rp.pos]
+	for rp.protocolRegex.MatchString(rp.Tokens[rp.pos]) {
+		protocol := rp.Tokens[rp.pos]
 		p := ruleStructure.Protocol{NameId: mapStrToLayerType[protocol]}
 		rp.pos++
-		for rp.pos < len(rp.tokens) && rp.fieldRegex.MatchString(rp.tokens[rp.pos]+" "+rp.tokens[rp.pos+1]) {
-			if rp.priorityRegex.MatchString(rp.tokens[rp.pos] + " " + rp.tokens[rp.pos+1]) {
+		for rp.pos < len(rp.Tokens) && rp.fieldRegex.MatchString(rp.Tokens[rp.pos]+" "+rp.Tokens[rp.pos+1]) {
+			if rp.priorityRegex.MatchString(rp.Tokens[rp.pos] + " " + rp.Tokens[rp.pos+1]) {
 				break
 			}
-			field := MapLayerTypeTOParseType[p.NameId](rp.tokens[rp.pos])
-			value, err := MapLayerTypeToParseFunc[p.NameId](field, rp.tokens[rp.pos+1])
-			if err != nil {
-				return nil, err
+			field := MapLayerTypeTOParseType[p.NameId](rp.Tokens[rp.pos])
+
+			tokenValue := rp.Tokens[rp.pos+1]
+			if tokenValue[0] == '$' {
+				tokenValue = tokenValue[1:]
+				value := rp.ConfigVarsMap[tokenValue].Tvalue
+				fmt.Println("$value is : ", value)
+				if value != nil {
+					p.Fields = append(p.Fields, &(ruleStructure.Field{NameId: field, ValuePtr: value}))
+				}
+			} else {
+				value, err := MapLayerTypeToParseFunc[p.NameId](field, rp.Tokens[rp.pos+1])
+				if err != nil {
+					fmt.Println("value is : ", value)
+					fmt.Println(p.NameId)
+					fmt.Println("dadawre", rp.Tokens[rp.pos])
+					fmt.Println("dadawre", rp.Tokens[rp.pos+1])
+					return nil, err
+				}
+				p.Fields = append(p.Fields, &(ruleStructure.Field{NameId: field, ValuePtr: value}))
+
 			}
-			p.Fields = append(p.Fields, &(ruleStructure.Field{NameId: field, ValuePtr: value}))
 			rp.pos += 2
 		}
 		result.Protocols = append(result.Protocols, &p)
 
-		if rp.operatorRegex.MatchString(rp.tokens[rp.pos]) {
-			result.Operator = append(result.Operator, mapStrLogicToInt8[rp.tokens[rp.pos]])
+		if rp.operatorRegex.MatchString(rp.Tokens[rp.pos]) {
+			result.Operator = append(result.Operator, mapStrLogicToInt8[rp.Tokens[rp.pos]])
 			rp.pos++
 			continue
 		}
 		break
 	}
 
-	if rp.pos+2 < len(rp.tokens) {
-		if rp.priorityRegex.MatchString(strings.Join(rp.tokens[rp.pos:rp.pos+2], " ")) {
-			priority, _ := strconv.Atoi(rp.priorityRegex.FindStringSubmatch(strings.Join(rp.tokens[rp.pos:rp.pos+2], " "))[1])
+	if rp.pos+2 < len(rp.Tokens) {
+		if rp.priorityRegex.MatchString(strings.Join(rp.Tokens[rp.pos:rp.pos+2], " ")) {
+			priority, _ := strconv.Atoi(rp.priorityRegex.FindStringSubmatch(strings.Join(rp.Tokens[rp.pos:rp.pos+2], " "))[1])
 			result.Priority = priority
 			rp.pos += 2
-			//continue
 		}
 
-		if rp.actionRegex.MatchString(strings.Join(rp.tokens[rp.pos:rp.pos+2], " ")) {
-			action := rp.actionRegex.FindStringSubmatch(strings.Join(rp.tokens[rp.pos:rp.pos+2], " "))[1]
+		if rp.actionRegex.MatchString(strings.Join(rp.Tokens[rp.pos:rp.pos+2], " ")) {
+			action := rp.actionRegex.FindStringSubmatch(strings.Join(rp.Tokens[rp.pos:rp.pos+2], " "))[1]
 			result.Action = mapStringToAction[action]
 			rp.pos += 2
-			//continue
 		}
 
-		if rp.msgRegex.MatchString(strings.Join(rp.tokens[rp.pos:rp.pos+2], " ")) {
-			msg := rp.msgRegex.FindStringSubmatch(strings.Join(rp.tokens[rp.pos:rp.pos+2], " "))[1]
+		endPos := rp.pos
+		for rp.msgEndRegex.MatchString(rp.Tokens[endPos]) == false {
+			endPos++
+		}
+
+		if rp.msgRegex.MatchString(strings.Join(rp.Tokens[rp.pos:endPos+1], " ")) {
+			msg := rp.msgRegex.FindStringSubmatch(strings.Join(rp.Tokens[rp.pos:endPos+1], " "))[1]
 			result.Msg = msg
-			rp.pos += 2
-			//continue
+			rp.pos = endPos
 		}
 	}
 
-	for rp.stringRegex.MatchString(rp.tokens[rp.pos]) {
-		result.Strings = append(result.Strings, &rp.tokens[rp.pos])
+	for rp.stringRegex.MatchString(rp.Tokens[rp.pos]) {
+		result.Strings = append(result.Strings, &rp.Tokens[rp.pos])
 		rp.pos++
-		if rp.pos >= len(rp.tokens) || (rp.pos < len(rp.tokens) && rp.protocolRegex.MatchString(rp.tokens[rp.pos])) {
+		if rp.pos >= len(rp.Tokens) || (rp.pos < len(rp.Tokens) && rp.protocolRegex.MatchString(rp.Tokens[rp.pos])) {
 			if ((result.Msg != "" && result.Action != PassAction && result.Action != 0) || result.Action == PassAction) && len(result.Protocols) == len(result.Operator)+1 && result.Priority != 0 {
 				result.ID = rp.curRule
 				rp.curRule++
@@ -126,14 +143,10 @@ func (rp *RuleParser) Parse() (*ruleStructure.Rule, error) {
 				return nil, err
 			}
 		}
-		//continue
 	}
 
 	err = RuleParserError("RuleParseError")
 	return nil, err
-	//}
-
-	//return result, nil
 }
 
 func (rp *RuleParser) GetAllRule(r *ruleStructure.RuleLinkedList) error {
