@@ -43,7 +43,7 @@ func NewRuleParser(ruleStr string, configVar map[string]*parserConfig.ConfigVar)
 		ruleStr:       ruleStr,
 		Tokens:        strings.Fields(ruleStr),
 		protocolRegex: regexp.MustCompile(`\b(Eth|IPv4|IPv6|TCP|UDP)\b`),
-		fieldRegex:    regexp.MustCompile(`\b(\w+)\b \b(\w+)\b`),
+		fieldRegex:    regexp.MustCompile(`(\b)(\w+)\b (\b|\$)(\w+)\b`),
 		operatorRegex: regexp.MustCompile(`[&|]`),
 		priorityRegex: regexp.MustCompile(`priority (\d+)`),
 		actionRegex:   regexp.MustCompile(`action (pass|record|alert|send|drop)`),
@@ -77,17 +77,16 @@ func (rp *RuleParser) Parse() (*ruleStructure.Rule, error) {
 			if tokenValue[0] == '$' {
 				tokenValue = tokenValue[1:]
 				value := rp.ConfigVarsMap[tokenValue].Tvalue
-				fmt.Println("$value is : ", value)
+				//fmt.Println("$value is : ", value)
 				if value != nil {
 					p.Fields = append(p.Fields, &(ruleStructure.Field{NameId: field, ValuePtr: value}))
 				}
+
 			} else {
 				value, err := MapLayerTypeToParseFunc[p.NameId](field, rp.Tokens[rp.pos+1])
+				//fmt.Println(p.NameId, "   ", rp.Tokens[rp.pos+1])
+				//fmt.Println(field, "  value is :  ", value)
 				if err != nil {
-					fmt.Println("value is : ", value)
-					fmt.Println(p.NameId)
-					fmt.Println("dadawre", rp.Tokens[rp.pos])
-					fmt.Println("dadawre", rp.Tokens[rp.pos+1])
 					return nil, err
 				}
 				p.Fields = append(p.Fields, &(ruleStructure.Field{NameId: field, ValuePtr: value}))
@@ -134,6 +133,7 @@ func (rp *RuleParser) Parse() (*ruleStructure.Rule, error) {
 		result.Strings = append(result.Strings, &rp.Tokens[rp.pos])
 		rp.pos++
 		if rp.pos >= len(rp.Tokens) || (rp.pos < len(rp.Tokens) && rp.protocolRegex.MatchString(rp.Tokens[rp.pos])) {
+
 			if ((result.Msg != "" && result.Action != PassAction && result.Action != 0) || result.Action == PassAction) && len(result.Protocols) == len(result.Operator)+1 && result.Priority != 0 {
 				result.ID = rp.curRule
 				rp.curRule++
@@ -159,7 +159,9 @@ func (rp *RuleParser) GetAllRule(r *ruleStructure.RuleLinkedList) error {
 		r.Insert(rule)
 	}
 	if err == nil || (err != nil && err.Error() == "parsing completed") {
+
 		return nil
 	}
+	fmt.Println("gwagawapogjapaw      ", err)
 	return err
 }

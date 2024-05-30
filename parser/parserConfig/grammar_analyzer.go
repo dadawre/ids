@@ -40,7 +40,7 @@ func (c *Configparser) ParseSelect() error {
 		parseError := ParseError("This is already the last token")
 		return &parseError
 	}
-	fmt.Println("curr:", c.curr, "  token:", (*c.Ttokens)[c.curr])
+	//fmt.Println("curr:", c.curr, "  token:", (*c.Ttokens)[c.curr])
 	if (*c.Ttokens)[c.curr].Type == TokenKeywordInclude {
 		includeString := c.parseInclude()
 		if includeString == nil {

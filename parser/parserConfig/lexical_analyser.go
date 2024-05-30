@@ -246,12 +246,12 @@ func NewConfigLexer(path string) *ConfigLexer {
 	}
 
 	// 创建bufio.Reader之前检查文件打开是否成功
-	info, err := file.Stat()
+	_, err = file.Stat()
 	if err != nil {
 		fmt.Println("Error getting file info:", err)
 		return nil
 	}
-	fmt.Println(info)
+
 	// 文件打开成功，创建bufio.Reader
 	reader := bufio.NewReader(file)
 

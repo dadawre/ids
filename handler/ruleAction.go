@@ -9,6 +9,8 @@ import (
 
 var ReceivePacketCount = 0
 
+var RuleMailSetting *MailSetting
+
 const (
 	PacketPassAction = iota + 1
 	PacketRecordAction
@@ -22,8 +24,8 @@ func (p *PacketHandler) PassPacket(rule *ruleStructure.Rule) {
 	fmt.Println("Passing packet  ", ReceivePacketCount)
 }
 
-// 定义每个枚举值对应的函数
-func (p *PacketHandler) recordPacket(rule *ruleStructure.Rule) {
+// RecordPacket 定义每个枚举值对应的函数
+func (p *PacketHandler) RecordPacket(rule *ruleStructure.Rule) {
 	PacketTopProtocol := p.decoded[len(p.decoded)-1].String()
 	var PacketID string
 
@@ -50,14 +52,20 @@ func (p *PacketHandler) recordPacket(rule *ruleStructure.Rule) {
 	fmt.Println("Recording packet")
 }
 
-func (p *PacketHandler) alertPacket(rule *ruleStructure.Rule) {
+func (p *PacketHandler) AlertPacket(rule *ruleStructure.Rule) {
+	p.RecordPacket(rule)
+	RuleMailSetting.SetBody(rule.Msg)
+	err := RuleMailSetting.SendMail()
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 	fmt.Println("Alerting packet")
 }
 
-func (p *PacketHandler) sendPacket(rule *ruleStructure.Rule) {
+func (p *PacketHandler) SendPacket(rule *ruleStructure.Rule) {
 	fmt.Println("Sending packet")
 }
 
-func (p *PacketHandler) dropPacket(rule *ruleStructure.Rule) {
+func (p *PacketHandler) DropPacket(rule *ruleStructure.Rule) {
 	fmt.Println("Dropping packet")
 }

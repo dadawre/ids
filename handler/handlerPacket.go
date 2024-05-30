@@ -71,10 +71,10 @@ func (p *PacketHandler) initialContainer() {
 	// PacketActionMap 创建一个map，将枚举值映射到对应的函数
 	p.PacketActionMap = map[int8]func(rule *ruleStructure.Rule){
 		PacketPassAction:   p.PassPacket,
-		PacketRecordAction: p.recordPacket,
-		PacketAlertAction:  p.alertPacket,
-		PacketSendAction:   p.sendPacket,
-		PacketDropAction:   p.dropPacket,
+		PacketRecordAction: p.RecordPacket,
+		PacketAlertAction:  p.AlertPacket,
+		PacketSendAction:   p.SendPacket,
+		PacketDropAction:   p.DropPacket,
 	}
 }
 
