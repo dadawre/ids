@@ -40,25 +40,25 @@ func TestConfigParser(t *testing.T) {
 	myTokens = append(myTokens, parserConfig.Token{Type: parserConfig.TokenStringValue, Value: "512"})
 
 	myConfigparser := parserConfig.NewConfigparser(&myTokens)
-	fmt.Println(*(myConfigparser.Ttokens))
+	fmt.Println(*(myConfigparser.ConfigTokens))
 
 	fmt.Println("--------------------------------------------")
 	myConfigparser.ParseSelect()
-	fmt.Println(myConfigparser.TconfigVars["homePath"].Ttoken)
-	fmt.Println(myConfigparser.TconfigVars["homePath"].Tname)
-	fmt.Println(myConfigparser.TconfigVars["homePath"].Tvalue.(string))
+	fmt.Println(myConfigparser.ConfigVars["homePath"].VarToken)
+	fmt.Println(myConfigparser.ConfigVars["homePath"].VarName)
+	fmt.Println(myConfigparser.ConfigVars["homePath"].VarValue.(string))
 
 	fmt.Println("--------------------------------------------")
 	myConfigparser.ParseSelect()
-	fmt.Println(*(myConfigparser.TincludePath)[0])
+	fmt.Println(*(myConfigparser.IncludePath)[0])
 	fmt.Println()
 
 	fmt.Println("--------------------------------------------")
 	myConfigparser.ParseSelect()
-	fmt.Println((myConfigparser.TconfigVars)["thisNetworkIpv4"].Ttoken.Type)
-	fmt.Println((myConfigparser.TconfigVars)["thisNetworkIpv4"].Ttoken.Value)
-	fmt.Println((myConfigparser.TconfigVars)["thisNetworkIpv4"].Tname)
-	getIPnet := (myConfigparser.TconfigVars)["thisNetworkIpv4"].Tvalue.(*net.IPNet)
+	fmt.Println((myConfigparser.ConfigVars)["thisNetworkIpv4"].VarToken.Type)
+	fmt.Println((myConfigparser.ConfigVars)["thisNetworkIpv4"].VarToken.Value)
+	fmt.Println((myConfigparser.ConfigVars)["thisNetworkIpv4"].VarName)
+	getIPnet := (myConfigparser.ConfigVars)["thisNetworkIpv4"].VarValue.(*net.IPNet)
 	fmt.Println(getIPnet.IP)
 	fmt.Println(getIPnet.Mask)
 	hostIP := net.ParseIP("192.168.80.1")
@@ -66,10 +66,10 @@ func TestConfigParser(t *testing.T) {
 
 	fmt.Println("--------------------------------------------")
 	myConfigparser.ParseSelect()
-	fmt.Println((myConfigparser.TconfigVars)["thisNetworkIpv6"].Ttoken.Type)
-	fmt.Println((myConfigparser.TconfigVars)["thisNetworkIpv6"].Ttoken.Value)
-	fmt.Println((myConfigparser.TconfigVars)["thisNetworkIpv6"].Tname)
-	getIPnet = (myConfigparser.TconfigVars)["thisNetworkIpv6"].Tvalue.(*net.IPNet)
+	fmt.Println((myConfigparser.ConfigVars)["thisNetworkIpv6"].VarToken.Type)
+	fmt.Println((myConfigparser.ConfigVars)["thisNetworkIpv6"].VarToken.Value)
+	fmt.Println((myConfigparser.ConfigVars)["thisNetworkIpv6"].VarName)
+	getIPnet = (myConfigparser.ConfigVars)["thisNetworkIpv6"].VarValue.(*net.IPNet)
 	fmt.Println(getIPnet.IP)
 	fmt.Println(getIPnet.Mask)
 	hostIP = net.ParseIP("AA22:BB11:1122:CDEF:1234:AA99:7654:7410")
@@ -77,14 +77,14 @@ func TestConfigParser(t *testing.T) {
 
 	fmt.Println("--------------------------------------------")
 	myConfigparser.ParseSelect()
-	fmt.Println((myConfigparser.TconfigVars)["httpPort"].Ttoken.Type)
-	fmt.Println((myConfigparser.TconfigVars)["httpPort"].Ttoken.Value)
-	fmt.Println((myConfigparser.TconfigVars)["httpPort"].Tname)
-	fmt.Println((myConfigparser.TconfigVars)["httpPort"].Tvalue)
+	fmt.Println((myConfigparser.ConfigVars)["httpPort"].VarToken.Type)
+	fmt.Println((myConfigparser.ConfigVars)["httpPort"].VarToken.Value)
+	fmt.Println((myConfigparser.ConfigVars)["httpPort"].VarName)
+	fmt.Println((myConfigparser.ConfigVars)["httpPort"].VarValue)
 	myConfigparser.ParseSelect()
 	//myConfigparser.ParseSelect()
-	fmt.Println("max_coroutine : ", myConfigparser.TConfigMapNameToValue["max_coroutine"])
-	fmt.Println("min_coroutine : ", myConfigparser.TConfigMapNameToValue["min_coroutine"])
+	fmt.Println("max_coroutine : ", myConfigparser.ConfigMapNameToValue["max_coroutine"])
+	fmt.Println("min_coroutine : ", myConfigparser.ConfigMapNameToValue["min_coroutine"])
 }
 
 func TestIPv6(t *testing.T) {
@@ -157,21 +157,21 @@ func TestGrammarLexical(t *testing.T) {
 	//fmt.Println(myConfigLexer.GetAllToken())
 
 	myConfigparser := parserConfig.NewConfigparser(&confTokens)
-	fmt.Println(*(myConfigparser.Ttokens))
+	fmt.Println(*(myConfigparser.ConfigTokens))
 	myConfigparser.ParseAllTokens()
-	for _, configvar := range myConfigparser.TconfigVars {
+	for _, configvar := range myConfigparser.ConfigVars {
 		fmt.Println("====================================================")
-		fmt.Println(*configvar.Ttoken)
-		fmt.Println(configvar.Tname)
-		fmt.Println(configvar.Tvalue)
+		fmt.Println(*configvar.VarToken)
+		fmt.Println(configvar.VarName)
+		fmt.Println(configvar.VarValue)
 	}
 
-	for _, IncludeString := range myConfigparser.TincludePath {
+	for _, IncludeString := range myConfigparser.IncludePath {
 		fmt.Println("====================================================")
 		fmt.Println(*IncludeString)
 	}
 
-	for key, value := range myConfigparser.TConfigMapNameToValue {
+	for key, value := range myConfigparser.ConfigMapNameToValue {
 		fmt.Println("====================================================")
 
 		fmt.Println(key, " :", value)

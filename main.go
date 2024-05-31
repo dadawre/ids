@@ -1,23 +1,33 @@
 package main
 
 import (
-	"graduationDesign/parser/parserConfig"
-	"graduationDesign/parser/parserRuler"
-	"graduationDesign/structure/ruleStructure"
-	"io/ioutil"
-	_ "net/http/pprof"
-)
-import (
 	"fmt"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"graduationDesign/handler"
+	"graduationDesign/parser/parserConfig"
+	"graduationDesign/parser/parserRuler"
+	"graduationDesign/structure/ruleStructure"
+	"io/ioutil"
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 	"strconv"
 	"time"
 )
+
+//import (
+//	"fmt"
+//	"github.com/google/gopacket"
+//	"github.com/google/gopacket/layers"
+//	"github.com/google/gopacket/pcap"
+//	"graduationDesign/handler"
+//	"log"
+//	"net/http"
+//	"strconv"
+//	"time"
+//)
 
 var MaxCoroutine int = 1024
 var PacketHandlerArr []*handler.PacketHandler
@@ -41,11 +51,11 @@ func InitializeConfig() {
 
 	myConfigparser.ParseAllTokens()
 
-	ConfigVars = myConfigparser.TconfigVars
+	ConfigVars = myConfigparser.ConfigVars
 
-	IncludePath = myConfigparser.TincludePath
+	IncludePath = myConfigparser.IncludePath
 
-	ConfigMapNameToValue = myConfigparser.TConfigMapNameToValue
+	ConfigMapNameToValue = myConfigparser.ConfigMapNameToValue
 }
 
 func InitializeRules() {

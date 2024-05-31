@@ -2,95 +2,103 @@ package main
 
 import (
 	"fmt"
+	"graduationDesign/parser/parserConfig"
 	"graduationDesign/parser/parserRuler"
 	"graduationDesign/structure/ruleStructure"
 	"io/ioutil"
-	"log"
+	"os"
 	"strings"
 	"testing"
 )
 
-func TestLexical(t *testing.T) {
-	content, err := ioutil.ReadFile("../rulers/myruler")
+// readFileContent 读取文件内容并返回字符串
+func readFileContent(path string) (string, error) {
+	content, err := ioutil.ReadFile(path)
 	if err != nil {
-		log.Fatal("Error reading file:", err)
-		//return nil
+		return "", fmt.Errorf("error reading file %s: %w", path, err)
 	}
-
-	rule := string(content)
-	parser := parserRuler.NewRuleParser(rule, nil)
-	result := ruleStructure.RuleLinkedList{}
-
-	for index, token := range parser.Tokens {
-		fmt.Println(index, "    ", token)
-	}
-
-	err = parser.GetAllRule(&result)
-	if err != nil {
-		fmt.Println("Error parsing rule:", err)
-		return
-	}
-
-	//content, err = ioutil.ReadFile("../rulers/backrule")
-	//if err != nil {
-	//	log.Fatal("Error reading file:", err)
-	//	//return nil
-	//}
-	//
-	//rule = string(content)
-	//
-	//parser.Refresh(rule)
-	//parser.GetAllRule(&result)
-
-	for index, token := range parser.Tokens {
-		fmt.Println(index, "    ", token)
-	}
-
-	fmt.Println("--------------------------------")
-
-	for node := result.GetHead(); node != nil; node = node.Next {
-		fmt.Println(node.RuleValue.ID)
-		fmt.Println(node.RuleValue.Msg)
-		fmt.Println(node.RuleValue.Action)
-		fmt.Println(node.RuleValue.Priority)
-		fmt.Println(node.RuleValue.Operator)
-		fmt.Println(node.RuleValue.Protocols)
-		fmt.Println(node.RuleValue.Strings)
-		fmt.Println("--------------------------------")
-	}
-
+	return string(content), nil
 }
 
-func TestField(t *testing.T) {
-
-	// 打开文件
-	//file, err := os.Open("../rulers/myruler")
-	//if err != nil {
-	//	fmt.Println("Error opening file:", err)
-	//	//return nil
-	//}
-
-	// 创建bufio.Reader之前检查文件打开是否成功
-	//info, err := file.Stat()
-	//if err != nil {
-	//	fmt.Println("Error getting file info:", err)
-	//	//return nil
-	//}
-	//fmt.Println(info)
-
-	content, err := ioutil.ReadFile("../rulers/myruler")
+// TestLexical 测试词法解析
+func TestLexical(t *testing.T) {
+	// 读取配置文件
+	configPath := "../conf/ids.conf"
+	file, err := os.Open(configPath)
 	if err != nil {
-		log.Fatal("Error reading file:", err)
-		//return nil
+		t.Fatalf("Error opening file %s: %v", configPath, err)
+	}
+	defer file.Close()
+
+	// 词法分析
+	myConfigLexer := parserConfig.NewConfigLexer(configPath)
+	tokens := myConfigLexer.GetAllToken()
+
+	// 语法分析
+	myConfigparser := parserConfig.NewConfigparser(&tokens)
+	myConfigparser.ParseAllTokens()
+	//if err := myConfigparser.ParseAllTokens(); err != nil {
+	//	t.Fatalf("Error parsing tokens: %v", err)
+	//}
+
+	// 读取规则文件
+	rulePath := "../rulers/myruler"
+	rule, err := readFileContent(rulePath)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	str := string(content)
+	// 解析规则
+	parser := parserRuler.NewRuleParser(rule, myConfigparser.ConfigVars)
+	result := ruleStructure.RuleLinkedList{}
+	parser.GetAllRule(&result)
+	// 打印词法分析结果
+	for index, token := range parser.Tokens {
+		t.Logf("Token %d: %s", index, token)
+	}
+
+	// 读取规则文件
+	rulePath = "../rulers/backrule"
+	rule, err = readFileContent(rulePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parser.Refresh(rule)
+
+	if err := parser.GetAllRule(&result); err != nil && err.Error() != "parsing completed" {
+		fmt.Println(parser.Tokens)
+		t.Fatalf("Error parsing rule: %v", err)
+	}
+
+	// 再次打印词法分析结果
+	for index, token := range parser.Tokens {
+		t.Logf("Token %d: %s", index, token)
+	}
+
+	t.Log("--------------------------------")
+
+	// 打印解析结果
+	for node := result.GetHead(); node != nil; node = node.Next {
+		t.Logf("\nID: %d\nMsg: %s\nAction: %d\nPriority: %d\nOperator: %v\nProtocols: %v\nStrings: %v\n--------------------------------",
+			node.RuleValue.ID, node.RuleValue.Msg, node.RuleValue.Action, node.RuleValue.Priority, node.RuleValue.Operator, node.RuleValue.Protocols, node.RuleValue.Strings)
+	}
+}
+
+// TestField 测试字段解析
+func TestField(t *testing.T) {
+	// 读取规则文件
+	rulePath := "../rulers/myruler"
+	str, err := readFileContent(rulePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 解析字段
 	strField := strings.Fields(str)
 	for index, iteratorStr := range strField {
-		fmt.Println(index, "  ", iteratorStr)
+		t.Logf("Field %d: %s", index, iteratorStr)
 	}
 }
-
 func TestAuxiliaryTransform(t *testing.T) {
 	// 处理 int 类型指针
 	//var a int = 10

@@ -10,11 +10,19 @@ import (
 	"time"
 )
 
+// CPU总占用率
 var currentTotalCPUPercent = 0.0
+
+// 每个CPU的占用率
 var currentPerCPUPercent []float64
+
+// 内存总占用率
 var currentTotalMemPercent = 0.0
+
+// GPU总占用率
 var currentTotalGPUPercent = 0.0
 
+// GetOSStates 获取操作系统的各参数
 func GetOSStates() {
 	interval := 1 * time.Second
 

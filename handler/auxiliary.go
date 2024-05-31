@@ -96,6 +96,7 @@ func CreateFile(dirPath string) error {
 	return nil
 }
 
+// AppendWriteFile 在指定文件中以append的方式写入字符串
 func AppendWriteFile(path, content string) error {
 	// 打开或创建文件
 	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)

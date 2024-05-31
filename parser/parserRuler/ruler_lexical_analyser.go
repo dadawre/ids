@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// RuleParser 规则解析结构体
 type RuleParser struct {
 	curRule       int
 	pos           int
@@ -25,6 +26,7 @@ type RuleParser struct {
 	ConfigVarsMap map[string]*parserConfig.ConfigVar
 }
 
+// Refresh 刷新Tokens并重新进行初始化
 func (rp *RuleParser) Refresh(ruleStr string) {
 	rp.ruleStr = ruleStr
 	rp.Tokens = strings.Fields(ruleStr)
@@ -54,6 +56,7 @@ func NewRuleParser(ruleStr string, configVar map[string]*parserConfig.ConfigVar)
 	}
 }
 
+// Parse 解析规则
 func (rp *RuleParser) Parse() (*ruleStructure.Rule, error) {
 	var err error
 	if rp.pos >= len(rp.Tokens) {
@@ -76,7 +79,7 @@ func (rp *RuleParser) Parse() (*ruleStructure.Rule, error) {
 			tokenValue := rp.Tokens[rp.pos+1]
 			if tokenValue[0] == '$' {
 				tokenValue = tokenValue[1:]
-				value := rp.ConfigVarsMap[tokenValue].Tvalue
+				value := rp.ConfigVarsMap[tokenValue].VarValue
 				//fmt.Println("$value is : ", value)
 				if value != nil {
 					p.Fields = append(p.Fields, &(ruleStructure.Field{NameId: field, ValuePtr: value}))
@@ -149,6 +152,7 @@ func (rp *RuleParser) Parse() (*ruleStructure.Rule, error) {
 	return nil, err
 }
 
+// GetAllRule 获取所有规则并插入到给定的链表中
 func (rp *RuleParser) GetAllRule(r *ruleStructure.RuleLinkedList) error {
 	var err error
 	var rule *ruleStructure.Rule
@@ -159,7 +163,6 @@ func (rp *RuleParser) GetAllRule(r *ruleStructure.RuleLinkedList) error {
 		r.Insert(rule)
 	}
 	if err == nil || (err != nil && err.Error() == "parsing completed") {
-
 		return nil
 	}
 	fmt.Println("gwagawapogjapaw      ", err)

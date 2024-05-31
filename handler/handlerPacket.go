@@ -10,6 +10,7 @@ import (
 
 var LogPath string
 
+// PacketHandler 进行数据包处理的函数，功能包括提取数据包各层协议并与规则进行匹配
 type PacketHandler struct {
 	handlerName                     string
 	isStart                         bool
@@ -78,6 +79,7 @@ func (p *PacketHandler) initialContainer() {
 	}
 }
 
+// PayloadMatch 进行匹配操作
 func (p *PacketHandler) PayloadMatch() {
 	for node := p.ruleLinkedList.GetHead(); node != nil; node = node.Next {
 		for index, protocol := range node.RuleValue.Protocols {
@@ -98,6 +100,7 @@ func (p *PacketHandler) PayloadMatch() {
 	p.PassPacket(nil)
 }
 
+// HandlePacket 一个协程函数负责接收数据包并进行解包
 func (p *PacketHandler) HandlePacket() {
 
 	//decoder := p.layersContain.LayersDecoder(layers.LayerTypeEthernet, gopacket.NilDecodeFeedback)
@@ -110,6 +113,7 @@ func (p *PacketHandler) HandlePacket() {
 	}
 }
 
+// StartHandle 开启数据包处理功能
 func (p *PacketHandler) StartHandle() bool {
 	if p.isStart == false {
 		go p.HandlePacket()
@@ -119,6 +123,7 @@ func (p *PacketHandler) StartHandle() bool {
 	return false
 }
 
+// NewHandlerPacket 创建一个新的数据包处理对象
 func NewHandlerPacket(PacketChan chan *gopacket.Packet, handlerName string, ruleList *ruleStructure.RuleLinkedList) *PacketHandler {
 	newHandlerPacket := &PacketHandler{
 		packetChan:     PacketChan,

@@ -11,6 +11,7 @@ var ReceivePacketCount = 0
 
 var RuleMailSetting *MailSetting
 
+// Action标识符
 const (
 	PacketPassAction = iota + 1
 	PacketRecordAction
@@ -24,7 +25,6 @@ func (p *PacketHandler) PassPacket(rule *ruleStructure.Rule) {
 	fmt.Println("Passing packet  ", ReceivePacketCount)
 }
 
-// RecordPacket 定义每个枚举值对应的函数
 func (p *PacketHandler) RecordPacket(rule *ruleStructure.Rule) {
 	PacketTopProtocol := p.decoded[len(p.decoded)-1].String()
 	var PacketID string

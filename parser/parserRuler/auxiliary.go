@@ -80,6 +80,7 @@ var MapLayerTypeTOParseType = map[gopacket.LayerType]func(fieldName string) int8
 	layers.LayerTypeARP:      parseARPType,
 }
 
+// ParseFieldError 定义解析错误类型
 type ParseFieldError string
 
 func (p ParseFieldError) Error() string {

@@ -55,6 +55,7 @@ func bytesEqual[T []byte | net.HardwareAddr](a, b T) bool {
 	return true
 }
 
+// MapLayerTypeToMatchFunc LayerType映射到对应协议的匹配函数
 var MapLayerTypeToMatchFunc = map[gopacket.LayerType]func(protocol *ruleStructure.Protocol, payloadPtr interface{}) bool{
 	layers.LayerTypeEthernet: MACPayloadMatch,
 	layers.LayerTypeARP:      ARPPayLoadMatch,
@@ -64,6 +65,7 @@ var MapLayerTypeToMatchFunc = map[gopacket.LayerType]func(protocol *ruleStructur
 	layers.LayerTypeUDP:      UDPPayLoadMatch,
 }
 
+// MACPayloadMatch 对Mac协议进行匹配
 func MACPayloadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) bool {
 	mac := payloadPtr.(*layers.Ethernet)
 

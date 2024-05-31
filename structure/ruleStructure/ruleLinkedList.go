@@ -5,16 +5,19 @@ import (
 	"github.com/google/gopacket"
 )
 
-type Protocol struct {
-	NameId gopacket.LayerType
-	Fields []*Field
-}
-
+// Field 协议字段结构体
 type Field struct {
 	NameId   int8
 	ValuePtr interface{}
 }
 
+// Protocol 协议类型及其字段集合结构体
+type Protocol struct {
+	NameId gopacket.LayerType
+	Fields []*Field
+}
+
+// Rule 规则结构体
 type Rule struct {
 	ID        int
 	Protocols []*Protocol
@@ -25,13 +28,13 @@ type Rule struct {
 	Strings   []*string
 }
 
-// RuleNode 代表链表中的一个节点
+// RuleNode 代表链表中的一个节点,值为一个规则指针
 type RuleNode struct {
 	RuleValue *Rule
 	Next      *RuleNode
 }
 
-// RuleLinkedList 代表链表
+// RuleLinkedList 代表链表,指向链表头节点
 type RuleLinkedList struct {
 	head *RuleNode
 }
