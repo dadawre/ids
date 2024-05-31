@@ -1,7 +1,6 @@
 package parserRuler
 
 import (
-	"fmt"
 	"graduationDesign/parser/parserConfig"
 	"graduationDesign/structure/ruleStructure"
 	"regexp"
@@ -26,19 +25,14 @@ type RuleParser struct {
 	ConfigVarsMap map[string]*parserConfig.ConfigVar
 }
 
-// Refresh 刷新Tokens并重新进行初始化
-func (rp *RuleParser) Refresh(ruleStr string) {
-	rp.ruleStr = ruleStr
-	rp.Tokens = strings.Fields(ruleStr)
-	rp.pos = 0
-}
-
+// RuleParserError 自定义错误类型
 type RuleParserError string
 
 func (e RuleParserError) Error() string {
 	return string(e)
 }
 
+// NewRuleParser 创建并初始化一个新的 RuleParser
 func NewRuleParser(ruleStr string, configVar map[string]*parserConfig.ConfigVar) *RuleParser {
 	return &RuleParser{
 		pos:           0,
@@ -56,44 +50,76 @@ func NewRuleParser(ruleStr string, configVar map[string]*parserConfig.ConfigVar)
 	}
 }
 
+// Refresh 刷新 Tokens 并重新进行初始化
+func (rp *RuleParser) Refresh(ruleStr string) {
+	rp.ruleStr = ruleStr
+	rp.Tokens = strings.Fields(ruleStr)
+	rp.pos = 0
+}
+
 // Parse 解析规则
 func (rp *RuleParser) Parse() (*ruleStructure.Rule, error) {
-	var err error
 	if rp.pos >= len(rp.Tokens) {
-		err = RuleParserError("parsing completed")
-		return nil, err
+		return nil, RuleParserError("parsing completed")
 	}
 
 	result := &ruleStructure.Rule{}
 
+	err := rp.parseProtocols(result)
+	if err != nil {
+		return nil, err
+	}
+
+	err = rp.parsePriorityAndAction(result)
+	if err != nil {
+		return nil, err
+	}
+
+	err = rp.parseMsg(result)
+	if err != nil {
+		return nil, err
+	}
+
+	err = rp.parseStrings(result)
+	if err != nil {
+		return nil, err
+	}
+
+	if rp.isValidRule(result) {
+		result.ID = rp.curRule
+		rp.curRule++
+		return result, nil
+	}
+
+	return nil, RuleParserError("something is invalid value")
+}
+
+// parseProtocols 解析协议部分
+func (rp *RuleParser) parseProtocols(result *ruleStructure.Rule) error {
 	for rp.protocolRegex.MatchString(rp.Tokens[rp.pos]) {
 		protocol := rp.Tokens[rp.pos]
 		p := ruleStructure.Protocol{NameId: mapStrToLayerType[protocol]}
 		rp.pos++
+
 		for rp.pos < len(rp.Tokens) && rp.fieldRegex.MatchString(rp.Tokens[rp.pos]+" "+rp.Tokens[rp.pos+1]) {
 			if rp.priorityRegex.MatchString(rp.Tokens[rp.pos] + " " + rp.Tokens[rp.pos+1]) {
 				break
 			}
 			field := MapLayerTypeTOParseType[p.NameId](rp.Tokens[rp.pos])
-
 			tokenValue := rp.Tokens[rp.pos+1]
+
 			if tokenValue[0] == '$' {
 				tokenValue = tokenValue[1:]
 				value := rp.ConfigVarsMap[tokenValue].VarValue
-				//fmt.Println("$value is : ", value)
 				if value != nil {
 					p.Fields = append(p.Fields, &(ruleStructure.Field{NameId: field, ValuePtr: value}))
 				}
-
 			} else {
 				value, err := MapLayerTypeToParseFunc[p.NameId](field, rp.Tokens[rp.pos+1])
-				//fmt.Println(p.NameId, "   ", rp.Tokens[rp.pos+1])
-				//fmt.Println(field, "  value is :  ", value)
 				if err != nil {
-					return nil, err
+					return err
 				}
 				p.Fields = append(p.Fields, &(ruleStructure.Field{NameId: field, ValuePtr: value}))
-
 			}
 			rp.pos += 2
 		}
@@ -106,7 +132,11 @@ func (rp *RuleParser) Parse() (*ruleStructure.Rule, error) {
 		}
 		break
 	}
+	return nil
+}
 
+// parsePriorityAndAction 解析优先级和动作
+func (rp *RuleParser) parsePriorityAndAction(result *ruleStructure.Rule) error {
 	if rp.pos+2 < len(rp.Tokens) {
 		if rp.priorityRegex.MatchString(strings.Join(rp.Tokens[rp.pos:rp.pos+2], " ")) {
 			priority, _ := strconv.Atoi(rp.priorityRegex.FindStringSubmatch(strings.Join(rp.Tokens[rp.pos:rp.pos+2], " "))[1])
@@ -119,52 +149,57 @@ func (rp *RuleParser) Parse() (*ruleStructure.Rule, error) {
 			result.Action = mapStringToAction[action]
 			rp.pos += 2
 		}
+	}
+	return nil
+}
 
-		endPos := rp.pos
-		for rp.msgEndRegex.MatchString(rp.Tokens[endPos]) == false {
-			endPos++
-		}
-
-		if rp.msgRegex.MatchString(strings.Join(rp.Tokens[rp.pos:endPos+1], " ")) {
-			msg := rp.msgRegex.FindStringSubmatch(strings.Join(rp.Tokens[rp.pos:endPos+1], " "))[1]
-			result.Msg = msg
-			rp.pos = endPos
+// parseMsg 解析消息
+func (rp *RuleParser) parseMsg(result *ruleStructure.Rule) error {
+	endPos := rp.pos
+	for !rp.msgEndRegex.MatchString(rp.Tokens[endPos]) {
+		endPos++
+		if endPos >= len(rp.Tokens) {
+			return RuleParserError("message parsing error")
 		}
 	}
 
+	if rp.msgRegex.MatchString(strings.Join(rp.Tokens[rp.pos:endPos+1], " ")) {
+		msg := rp.msgRegex.FindStringSubmatch(strings.Join(rp.Tokens[rp.pos:endPos+1], " "))[1]
+		result.Msg = msg
+		rp.pos = endPos + 1
+	}
+	return nil
+}
+
+// parseStrings 解析字符串
+func (rp *RuleParser) parseStrings(result *ruleStructure.Rule) error {
 	for rp.stringRegex.MatchString(rp.Tokens[rp.pos]) {
 		result.Strings = append(result.Strings, &rp.Tokens[rp.pos])
 		rp.pos++
 		if rp.pos >= len(rp.Tokens) || (rp.pos < len(rp.Tokens) && rp.protocolRegex.MatchString(rp.Tokens[rp.pos])) {
-
-			if ((result.Msg != "" && result.Action != PassAction && result.Action != 0) || result.Action == PassAction) && len(result.Protocols) == len(result.Operator)+1 && result.Priority != 0 {
-				result.ID = rp.curRule
-				rp.curRule++
-				return result, nil
-			} else {
-				err = RuleParserError("something is invalid value")
-				return nil, err
-			}
+			break
 		}
 	}
+	return nil
+}
 
-	err = RuleParserError("RuleParseError")
-	return nil, err
+// isValidRule 检查规则的有效性
+func (rp *RuleParser) isValidRule(result *ruleStructure.Rule) bool {
+	return (result.Msg != "" && result.Action != PassAction && result.Action != 0 || result.Action == PassAction) &&
+		len(result.Protocols) == len(result.Operator)+1 &&
+		result.Priority != 0
 }
 
 // GetAllRule 获取所有规则并插入到给定的链表中
 func (rp *RuleParser) GetAllRule(r *ruleStructure.RuleLinkedList) error {
-	var err error
-	var rule *ruleStructure.Rule
-	for rule, err = rp.Parse(); err == nil; rule, err = rp.Parse() {
-		//rp.RuleLIST = append(rp.RuleLIST, rule)
-		//fmt.Println(rule)
-		//rp.RuleLIST.Insert(rule)
+	for {
+		rule, err := rp.Parse()
+		if err != nil {
+			if err.Error() == "parsing completed" {
+				return nil
+			}
+			return err
+		}
 		r.Insert(rule)
 	}
-	if err == nil || (err != nil && err.Error() == "parsing completed") {
-		return nil
-	}
-	fmt.Println("gwagawapogjapaw      ", err)
-	return err
 }

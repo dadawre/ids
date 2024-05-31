@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
+	"graduationDesign/OSController"
 	"graduationDesign/handler"
 	"graduationDesign/parser/parserConfig"
 	"graduationDesign/parser/parserRuler"
@@ -17,78 +17,59 @@ import (
 	"time"
 )
 
-//import (
-//	"fmt"
-//	"github.com/google/gopacket"
-//	"github.com/google/gopacket/layers"
-//	"github.com/google/gopacket/pcap"
-//	"graduationDesign/handler"
-//	"log"
-//	"net/http"
-//	"strconv"
-//	"time"
-//)
+var (
+	MaxCoroutine = 1024
+	ConfigPath   = "./conf/ids.conf"
+	LogPath      = "./log"
+)
 
-var MaxCoroutine int = 1024
-var PacketHandlerArr []*handler.PacketHandler
-
-var ConfigPath = "./conf/ids.conf"
-var ConfigVars map[string]*parserConfig.ConfigVar
-var IncludePath []*string
-var ConfigMapNameToValue map[string]string
-var LogPath = "./log"
-var MapVariableNameToVariable = map[string]interface{}{
-	"max_coroutine": &MaxCoroutine,
-}
-
-var LISTRules *ruleStructure.RuleLinkedList
+var (
+	PacketHandlerArr          []*handler.PacketHandler
+	ConfigVars                map[string]*parserConfig.ConfigVar
+	IncludePaths              []*string
+	ConfigMapNameToValue      map[string]string
+	MapVariableNameToVariable = map[string]interface{}{"max_coroutine": new(int)}
+	LISTRules                 *ruleStructure.RuleLinkedList
+)
 
 func InitializeConfig() {
-	myConfigLexer := parserConfig.NewConfigLexer(ConfigPath)
-	confTokens := myConfigLexer.GetAllToken()
+	configLexer := parserConfig.NewConfigLexer(ConfigPath)
+	confTokens := configLexer.GetAllToken()
 
-	myConfigparser := parserConfig.NewConfigparser(&confTokens)
+	configParser := parserConfig.NewConfigparser(&confTokens)
+	configParser.ParseAllTokens()
 
-	myConfigparser.ParseAllTokens()
-
-	ConfigVars = myConfigparser.ConfigVars
-
-	IncludePath = myConfigparser.IncludePath
-
-	ConfigMapNameToValue = myConfigparser.ConfigMapNameToValue
+	ConfigVars = configParser.ConfigVars
+	IncludePaths = configParser.IncludePath
+	ConfigMapNameToValue = configParser.ConfigMapNameToValue
 }
 
 func InitializeRules() {
 	LISTRules = &ruleStructure.RuleLinkedList{}
 	parser := parserRuler.NewRuleParser("", ConfigVars)
-	for index := range IncludePath {
-		content, err := ioutil.ReadFile(*(IncludePath[index]))
+	for _, path := range IncludePaths {
+		content, err := ioutil.ReadFile(*path)
 		if err != nil {
-			log.Fatal("Error reading file:", err)
-			//return nil
+			log.Fatalf("Error reading file: %v", err)
 		}
 
 		rule := string(content)
 		parser.Refresh(rule)
 		err = parser.GetAllRule(LISTRules)
-
 		if err != nil {
-			fmt.Println("Error parsing rule:", err)
-			return
+			log.Printf("Error parsing rule: %v", err)
 		}
 	}
 }
 
 func InitializeVariable() {
 	for key, value := range ConfigMapNameToValue {
-		//fmt.Println(key, "   ", value)
-		if MapVariableNameToVariable[key] != nil {
-			// 使用 strconv.Atoi 将字符串转换为 int
+		if varPtr, exists := MapVariableNameToVariable[key]; exists {
 			num, err := strconv.Atoi(value)
 			if err == nil {
-				*(MapVariableNameToVariable[key].(*int)) = num
+				*(varPtr.(*int)) = num
 			} else {
-				*(MapVariableNameToVariable[key]).(*string) = value
+				*(varPtr.(*string)) = value
 			}
 		}
 	}
@@ -97,82 +78,84 @@ func InitializeVariable() {
 }
 
 func InitializeMail() {
-	mail := &(handler.MailSetting{})
-	mail = mail.SetSmtpHost("smtp.qq.com").SetSmtpPort("587").SetToEmail("2939188260@qq.com")
-	mail = mail.SetAuthEmail("112724772@qq.com").SetAuthPassword("bcernpppsoejbifi")
-	mail = mail.SetSubject("Subject: 测试邮件\n").SetBody("这是通过Go语言发送的测试邮件。")
+	mail := &handler.MailSetting{}
+	mail = mail.SetSmtpHost("smtp.qq.com").
+		SetSmtpPort("587").
+		SetToEmail("2939188260@qq.com").
+		SetAuthEmail("112724772@qq.com").
+		SetAuthPassword("bcernpppsoejbifi").
+		SetSubject("Subject: 测试邮件\n").
+		SetBody("这是通过Go语言发送的测试邮件。")
 	handler.RuleMailSetting = mail
 }
 
-func getAllNetworkDev() {
-	devices, err := pcap.FindAllDevs() //获取所有网络接口
+type NetworkDevice struct {
+	Name        string
+	Description string
+}
+
+func getAllNetworkDev() ([]NetworkDevice, error) {
+	devices, err := pcap.FindAllDevs()
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("error finding devices: %v", err)
 	}
 
-	// 打印可用的网络接口
+	var networkDevices []NetworkDevice
 	for _, device := range devices {
-		fmt.Println("NameId:", device.Name)
-		fmt.Println("Description:", device.Description)
-		fmt.Println("Addresses:", device.Addresses)
-		fmt.Println()
+		networkDevices = append(networkDevices, NetworkDevice{
+			Name:        device.Name,
+			Description: device.Description,
+		})
 	}
+	return networkDevices, nil
 }
 
 func main() {
+	OSController.GetOSStates(1 * time.Second)
 	InitializeConfig()
 	InitializeRules()
 	InitializeVariable()
-	//go getOSStates()
-	//getAllNetworkDev()
-	//handle, err := pcap.OpenLive("\\Device\\NPF_{8809DE90-DC4E-4E82-8495-740651F390A5}", 65536, true, pcap.BlockForever)
+
 	inactiveHandle, err := pcap.NewInactiveHandle("\\Device\\NPF_{8809DE90-DC4E-4E82-8495-740651F390A5}")
 	if err != nil {
-		fmt.Println("Error creating inactive handle:", err)
-		return
+		log.Fatalf("Error creating inactive handle: %v", err)
 	}
-	defer inactiveHandle.CleanUp() // 确保在函数结束时关闭未激活的 pcap 句柄
+	defer inactiveHandle.CleanUp()
 
-	err = inactiveHandle.SetTimeout(time.Second)
-	if err != nil {
-		log.Fatal(err)
+	if err := inactiveHandle.SetTimeout(time.Second); err != nil {
+		log.Fatalf("Error setting timeout: %v", err)
 	}
 
 	if err := inactiveHandle.SetPromisc(true); err != nil {
-		fmt.Println("Error setting promisc mode:", err)
+		log.Fatalf("Error setting promiscuous mode: %v", err)
 	}
 
-	// 激活 pcap 句柄
 	handle, err := inactiveHandle.Activate()
 	if err != nil {
-		fmt.Println("Error activating handle:", err)
-		return
+		log.Fatalf("Error activating handle: %v", err)
 	}
-	defer handle.Close() // 确保在函数结束时关闭 pcap 句柄
+	defer handle.Close()
 
 	go func() {
 		log.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
 
-	sourcePacket := gopacket.NewPacketSource(handle, handle.LinkType())
+	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 
-	Channels := make([]chan *gopacket.Packet, MaxCoroutine+1, MaxCoroutine+1)
-	PacketHandlerArr = make([]*handler.PacketHandler, MaxCoroutine+1, MaxCoroutine+1)
+	Channels := make([]chan *gopacket.Packet, MaxCoroutine)
+	PacketHandlerArr = make([]*handler.PacketHandler, MaxCoroutine)
 
-	for i, _ := range Channels {
+	for i := 0; i < MaxCoroutine; i++ {
 		Channels[i] = make(chan *gopacket.Packet)
 		PacketHandlerArr[i] = handler.NewHandlerPacket(Channels[i], "coroutine"+strconv.Itoa(i), LISTRules)
 		PacketHandlerArr[i].StartHandle()
 	}
 
-	for packet := range sourcePacket.Packets() {
-		//fmt.Println(packet)
-		networkLayerType := packet.Layer(layers.LayerTypeIPv4) != nil || packet.Layer(layers.LayerTypeIPv6) != nil
-		if networkLayerType != false {
-			IPFlow := packet.NetworkLayer().NetworkFlow()
-			IPFlowHash := IPFlow.FastHash()
-			Channels[IPFlowHash%uint64(MaxCoroutine)] <- &packet
+	for packet := range packetSource.Packets() {
+		if packet.NetworkLayer() != nil {
+			ipFlow := packet.NetworkLayer().NetworkFlow()
+			ipFlowHash := ipFlow.FastHash()
+			Channels[ipFlowHash%uint64(MaxCoroutine)] <- &packet
 		}
 	}
-
 }

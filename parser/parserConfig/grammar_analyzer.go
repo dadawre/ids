@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// Configparser 表示配置文件语法分析器
 type Configparser struct {
 	ConfigTokens         *[]Token
 	curr                 int
@@ -15,6 +16,7 @@ type Configparser struct {
 	ConfigMapNameToValue map[string]string
 }
 
+// ConfigVar 表示配置变量
 type ConfigVar struct {
 	VarToken *Token
 	VarName  string
@@ -23,139 +25,129 @@ type ConfigVar struct {
 
 // NewConfigparser 新建一个配置文件语法分析器
 func NewConfigparser(tokens *[]Token) *Configparser {
-	newConfigParser := Configparser{ConfigTokens: tokens}
-	newConfigParser.IncludePath = make([]*string, 0, 0)
-	newConfigParser.ConfigVars = make(map[string]*ConfigVar, 0)
-	newConfigParser.ConfigMapNameToValue = make(map[string]string, 0)
-	return &newConfigParser
+	return &Configparser{
+		ConfigTokens:         tokens,
+		IncludePath:          []*string{},
+		ConfigVars:           make(map[string]*ConfigVar),
+		ConfigMapNameToValue: make(map[string]string),
+	}
 }
 
 // ParseError 语法分析错误对象
 type ParseError string
 
-func (s *ParseError) Error() string {
-	return fmt.Sprintf("parse error : %s", string(*s))
+func (s ParseError) Error() string {
+	return fmt.Sprintf("parse error: %s", string(s))
 }
 
 // ParseSelect 选择对Token进行哪种语法分析
 func (c *Configparser) ParseSelect() error {
 	if c.curr >= len(*c.ConfigTokens) {
-		parseError := ParseError("This is already the last token")
-		return &parseError
+		return ParseError("this is already the last token")
 	}
-	//fmt.Println("curr:", c.curr, "  token:", (*c.ConfigTokens)[c.curr])
-	if (*c.ConfigTokens)[c.curr].Type == TokenKeywordInclude {
-		includeString := c.parseInclude()
-		if includeString == nil {
-			err := ParseError("something is wrong with parse include")
-			return &err
+
+	switch (*c.ConfigTokens)[c.curr].Type {
+	case TokenKeywordInclude:
+		if includeString := c.parseInclude(); includeString != nil {
+			c.IncludePath = append(c.IncludePath, includeString)
+		} else {
+			return ParseError("something is wrong with parse include")
 		}
-		c.IncludePath = append(c.IncludePath, includeString)
-	} else if (*c.ConfigTokens)[c.curr].Type == TokenKeywordVar {
-		configvar := c.parseKeywordVar()
-		if configvar == nil {
-			err := ParseError("something is wrong with parse var")
-			return &err
+	case TokenKeywordVar:
+		if configvar := c.parseKeywordVar(); configvar != nil {
+			c.ConfigVars[configvar.VarName] = configvar
+		} else {
+			return ParseError("something is wrong with parse var")
 		}
-		//c.ConfigVars = append(c.ConfigVars, configvar)
-		c.ConfigVars[configvar.VarName] = configvar
-	} else if (*c.ConfigTokens)[c.curr].Type == TokenKeywordIPv4Var {
-		IPValue := c.parserKeywordIp(true)
-		if IPValue == nil {
-			err := ParseError("something is wrong with parse ipv4")
-			return &err
+	case TokenKeywordIPv4Var:
+		if IPValue := c.parseKeywordIP(true); IPValue != nil {
+			c.ConfigVars[IPValue.VarName] = IPValue
+		} else {
+			return ParseError("something is wrong with parse ipv4")
 		}
-		//c.ConfigVars = append(c.ConfigVars, IPValue)
-		c.ConfigVars[IPValue.VarName] = IPValue
-	} else if (*c.ConfigTokens)[c.curr].Type == TokenKeywordIPv6Var {
-		IPValue := c.parserKeywordIp(false)
-		if IPValue == nil {
-			err := ParseError("something is wrong with parse ipv6")
-			return &err
+	case TokenKeywordIPv6Var:
+		if IPValue := c.parseKeywordIP(false); IPValue != nil {
+			c.ConfigVars[IPValue.VarName] = IPValue
+		} else {
+			return ParseError("something is wrong with parse ipv6")
 		}
-		//c.ConfigVars = append(c.ConfigVars, IPValue)
-		c.ConfigVars[IPValue.VarName] = IPValue
-	} else if (*c.ConfigTokens)[c.curr].Type == TokenKeywordPortVar {
-		portArray := c.parserKeywordPort()
-		if portArray == nil {
-			err := ParseError("something is wrong with parse port")
-			return &err
+	case TokenKeywordPortVar:
+		if portArray := c.parseKeywordPort(); portArray != nil {
+			c.ConfigVars[portArray.VarName] = portArray
+		} else {
+			return ParseError("something is wrong with parse port")
 		}
-		//c.ConfigVars = append(c.ConfigVars, portArray)
-		c.ConfigVars[portArray.VarName] = portArray
-	} else if (*c.ConfigTokens)[c.curr].Type == TokenKeywordConfig {
+	case TokenKeywordConfig:
 		c.curr++
-		var err error
-		var haveConfPara bool
-		for haveConfPara, err = c.parseConfigVar(); haveConfPara; haveConfPara, err = c.parseConfigVar() {
+		for {
+			if haveConfPara, err := c.parseConfigVar(); !haveConfPara {
+				return err
+			}
 		}
-		return err
 	}
 	return nil
 }
 
-// 解析配置文件中的环境参数
+// parseConfigVar 解析配置文件中的环境参数
 func (c *Configparser) parseConfigVar() (bool, error) {
-	var Key string
-	if c.curr < len(*c.ConfigTokens) && (*c.ConfigTokens)[c.curr].Type == TokenIdentifier {
-		Key = (*c.ConfigTokens)[c.curr].Value
-		c.curr++
-	} else {
+	if c.curr >= len(*c.ConfigTokens) || (*c.ConfigTokens)[c.curr].Type != TokenIdentifier {
 		return false, nil
 	}
+	Key := (*c.ConfigTokens)[c.curr].Value
+	c.curr++
+
 	if c.curr < len(*c.ConfigTokens) && (*c.ConfigTokens)[c.curr].Type == TokenStringValue {
-		Value := (*c.ConfigTokens)[c.curr].Value
-		c.ConfigMapNameToValue[Key] = Value
+		c.ConfigMapNameToValue[Key] = (*c.ConfigTokens)[c.curr].Value
+		c.curr++
+		return true, nil
+	}
+	return false, ParseError("something is wrong with config")
+}
+
+// parseKeywordVar 解析配置文件中一般关键字
+func (c *Configparser) parseKeywordVar() *ConfigVar {
+	if c.curr+2 >= len(*c.ConfigTokens) {
+		return nil
+	}
+
+	NewConfigVar := &ConfigVar{VarToken: &(*c.ConfigTokens)[c.curr]}
+	c.curr++
+
+	if (*c.ConfigTokens)[c.curr].Type == TokenIdentifier {
+		NewConfigVar.VarName = (*c.ConfigTokens)[c.curr].Value
 		c.curr++
 	} else {
-		err := ParseError("something is wrong with config")
-		return false, &err
+		return nil
 	}
-	return true, nil
-}
 
-// 解析配置文件中一般关键字
-func (c *Configparser) parseKeywordVar() *ConfigVar {
-	NewConfigVar := ConfigVar{}
-	NewConfigVar.VarToken = &((*c.ConfigTokens)[c.curr])
-
-	c.curr++
-	if c.curr < len(*c.ConfigTokens) && ((*c.ConfigTokens)[c.curr]).Type == TokenIdentifier {
-		NewConfigVar.VarName = ((*c.ConfigTokens)[c.curr]).Value
+	if (*c.ConfigTokens)[c.curr].Type == TokenStringValue {
+		NewConfigVar.VarValue = (*c.ConfigTokens)[c.curr].Value
+		c.curr++
 	} else {
 		return nil
 	}
-	c.curr++
-	if c.curr < len(*c.ConfigTokens) && ((*c.ConfigTokens)[c.curr]).Type == TokenStringValue {
-		NewConfigVar.VarValue = ((*c.ConfigTokens)[c.curr]).Value
-	} else {
-		return nil
-	}
-	c.curr++
-	return &NewConfigVar
+
+	return NewConfigVar
 }
 
-// 解析配置文件中规则路径
+// parseInclude 解析配置文件中规则路径
 func (c *Configparser) parseInclude() *string {
 	curString := ""
-	if c.curr+1 < len(*c.ConfigTokens) {
-		c.curr += 1
-		for c.curr < len(*c.ConfigTokens) {
-			currToken := (*c.ConfigTokens)[c.curr]
-			if currToken.Type != TokenStringValue && currToken.Type != TokenVarUse {
-				break
-			}
-			if currToken.Type == TokenStringValue {
-				curString += currToken.Value
-			} else {
-				for _, currConfigVar := range c.ConfigVars {
-					if currConfigVar.VarToken.Type == TokenKeywordVar && currConfigVar.VarName == currToken.Value {
-						curString += currConfigVar.VarValue.(string)
-					}
-				}
-			}
-			c.curr++
+	c.curr++
+	for c.curr < len(*c.ConfigTokens) {
+		currToken := (*c.ConfigTokens)[c.curr]
+		if currToken.Type != TokenStringValue && currToken.Type != TokenVarUse {
+			break
 		}
+
+		if currToken.Type == TokenStringValue {
+			curString += currToken.Value
+		} else {
+			if configVar, exists := c.ConfigVars[currToken.Value]; exists && configVar.VarToken.Type == TokenKeywordVar {
+				curString += configVar.VarValue.(string)
+			}
+		}
+		c.curr++
 	}
 	return &curString
 }
@@ -163,8 +155,8 @@ func (c *Configparser) parseInclude() *string {
 // InvalidIPAddressError 解析IP错误类型
 type InvalidIPAddressError string
 
-func (e *InvalidIPAddressError) Error() string {
-	return fmt.Sprintf("invalid IPv4 address: %s", string(*e))
+func (e InvalidIPAddressError) Error() string {
+	return fmt.Sprintf("invalid IP address: %s", string(e))
 }
 
 // IPStringToIPNet 将字符串解析为net.IPNet,支持IPv6
@@ -174,125 +166,107 @@ func IPStringToIPNet(ipStr string, isIpv4 bool) (*net.IPNet, error) {
 		return subnet, nil
 	}
 
-	var maskStr string
+	maskStr := "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"
 	if isIpv4 {
 		maskStr = "255.255.255.255"
-	} else {
-		maskStr = "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"
 	}
 
 	networkIP := net.ParseIP(ipStr)
-
 	if networkIP == nil {
 		return nil, fmt.Errorf("invalid network IP address: %s", ipStr)
 	}
-	//fmt.Println(networkIP)
 
 	maskIP := net.ParseIP(maskStr)
 	if maskIP == nil {
 		return nil, fmt.Errorf("invalid mask IP address: %s", maskStr)
 	}
-	//fmt.Println(maskIP)
-	// Convert mask IP to net.IPMask
-	var mask net.IPMask
+
+	mask := net.IPMask(maskIP.To16())
 	if isIpv4 {
 		mask = net.IPMask(maskIP.To4())
-	} else {
-		mask = net.IPMask(maskIP.To16())
 	}
-	//fmt.Println(mask)
 
-	if !(len(mask) == 4) && !(len(mask) == 16) {
+	if len(mask) != 4 && len(mask) != 16 {
 		return nil, fmt.Errorf("invalid mask length: %d", len(mask))
 	}
 
-	// Create an IPNet from the network IP and mask
-	ipNet := &net.IPNet{
-		IP:   networkIP,
-		Mask: mask,
-	}
-	return ipNet, nil
+	return &net.IPNet{IP: networkIP, Mask: mask}, nil
 }
 
-// 解析IP
-func (c *Configparser) parserKeywordIp(isIpv4 bool) *ConfigVar {
-	NewConfigVar := ConfigVar{}
-	NewConfigVar.VarToken = &((*c.ConfigTokens)[c.curr])
+// parseKeywordIP 解析IP
+func (c *Configparser) parseKeywordIP(isIpv4 bool) *ConfigVar {
+	if c.curr+2 >= len(*c.ConfigTokens) {
+		return nil
+	}
 
+	NewConfigVar := &ConfigVar{VarToken: &(*c.ConfigTokens)[c.curr]}
 	c.curr++
-	if c.curr < len(*c.ConfigTokens) && ((*c.ConfigTokens)[c.curr]).Type == TokenIdentifier {
-		NewConfigVar.VarName = ((*c.ConfigTokens)[c.curr]).Value
+
+	if (*c.ConfigTokens)[c.curr].Type == TokenIdentifier {
+		NewConfigVar.VarName = (*c.ConfigTokens)[c.curr].Value
+		c.curr++
 	} else {
 		return nil
 	}
-	c.curr++
-	if c.curr < len(*c.ConfigTokens) && ((*c.ConfigTokens)[c.curr]).Type >= TokenIpv4Value && ((*c.ConfigTokens)[c.curr]).Type <= TokenIpv6NetworkValue {
-		IPvalue, err := IPStringToIPNet(((*c.ConfigTokens)[c.curr]).Value, isIpv4)
-		if err != nil {
-			return nil
+
+	if (*c.ConfigTokens)[c.curr].Type >= TokenIpv4Value && (*c.ConfigTokens)[c.curr].Type <= TokenIpv6NetworkValue {
+		if IPvalue, err := IPStringToIPNet((*c.ConfigTokens)[c.curr].Value, isIpv4); err == nil {
+			NewConfigVar.VarValue = IPvalue
+			c.curr++
+			return NewConfigVar
 		}
-		NewConfigVar.VarValue = IPvalue
-	} else {
-		return nil
 	}
-	c.curr++
-	return &NewConfigVar
-
+	return nil
 }
 
 // StrToArr 解析字符串到数组
 func StrToArr(arrStr string) []int {
-	// 去除前后的方括号
 	arrStr = strings.Trim(arrStr, "[]")
-
-	// 使用逗号分割字符串
 	parts := strings.Split(arrStr, ",")
+	result := make([]int, len(parts))
 
-	// 创建一个整数数组存储结果
-	var result []int
-
-	// 遍历分割后的字符串，将每个部分转换为整数并添加到数组中
-	for _, part := range parts {
-		number, err := strconv.Atoi(strings.TrimSpace(part))
-		if err != nil {
+	for i, part := range parts {
+		if number, err := strconv.Atoi(strings.TrimSpace(part)); err == nil {
+			result[i] = number
+		} else {
 			fmt.Println("Error converting string to integer:", err)
 			return nil
 		}
-		result = append(result, number)
 	}
-
-	// 输出结果数组
-	//fmt.Println("Result array:", result)
 	return result
 }
 
-func (c *Configparser) parserKeywordPort() *ConfigVar {
-	NewConfigVar := ConfigVar{}
-	NewConfigVar.VarToken = &((*c.ConfigTokens)[c.curr])
+// parseKeywordPort 解析端口关键字
+func (c *Configparser) parseKeywordPort() *ConfigVar {
+	if c.curr+2 >= len(*c.ConfigTokens) {
+		return nil
+	}
 
+	NewConfigVar := &ConfigVar{VarToken: &(*c.ConfigTokens)[c.curr]}
 	c.curr++
-	if c.curr < len(*c.ConfigTokens) && ((*c.ConfigTokens)[c.curr]).Type == TokenIdentifier {
-		NewConfigVar.VarName = ((*c.ConfigTokens)[c.curr]).Value
+
+	if (*c.ConfigTokens)[c.curr].Type == TokenIdentifier {
+		NewConfigVar.VarName = (*c.ConfigTokens)[c.curr].Value
+		c.curr++
 	} else {
 		return nil
 	}
-	c.curr++
-	if c.curr < len(*c.ConfigTokens) && ((*c.ConfigTokens)[c.curr]).Type == TokenStringValue {
-		portArray := StrToArr(((*c.ConfigTokens)[c.curr]).Value)
-		if portArray == nil {
-			return nil
+
+	if (*c.ConfigTokens)[c.curr].Type == TokenStringValue {
+		if portArray := StrToArr((*c.ConfigTokens)[c.curr].Value); portArray != nil {
+			NewConfigVar.VarValue = portArray
+			c.curr++
+			return NewConfigVar
 		}
-		NewConfigVar.VarValue = portArray
-	} else {
-		return nil
 	}
-	c.curr++
-	return &NewConfigVar
+	return nil
 }
 
+// ParseAllTokens 解析所有Token
 func (c *Configparser) ParseAllTokens() {
-	var err error
-	for err == nil {
-		err = c.ParseSelect()
+	for {
+		if err := c.ParseSelect(); err != nil {
+			break
+		}
 	}
 }
