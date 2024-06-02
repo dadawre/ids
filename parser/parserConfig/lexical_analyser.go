@@ -3,7 +3,6 @@ package parserConfig
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"regexp"
@@ -88,14 +87,7 @@ func (l *ConfigLexer) NextToken() (Token, error) {
 			continue
 		}
 		if l.curr == eof {
-			defer func(file *os.File) {
-				err := file.Close()
-				if err != nil {
-					fmt.Println(err.Error())
-				}
-			}(l.file)
-			err := currCharError("curr is EOF")
-			return Token{Type: TokenEOF, Value: ""}, &err
+			break
 		}
 
 		if unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) || l.curr == '$' || l.curr == '/' || l.curr == '_' || l.curr == '.' || l.curr == '[' || l.curr == ']' || l.curr == ',' {
@@ -106,6 +98,16 @@ func (l *ConfigLexer) NextToken() (Token, error) {
 
 		panic(fmt.Sprintf("Invalid character: %c", l.curr))
 	}
+
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+	}(l.file)
+	err := currCharError("curr is EOF")
+	return Token{Type: TokenEOF, Value: ""}, &err
+
 }
 
 // isSpecial checks if a character is special.
@@ -228,7 +230,7 @@ func NewConfigLexer(path string) *ConfigLexer {
 	}
 
 	reader := bufio.NewReader(file)
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		log.Fatalf("Error reading file: %v", err)
 		return nil

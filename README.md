@@ -22,13 +22,14 @@ rules文件规则如下:
     丢弃(drop 丢弃数据包并记录到紧急日志中)
     协议名 {协议字段名 协议字段值} {&| | |~ 协议名 协议字段名 协议字段值} priority 优先级(优先级越高，越后执行,优先级值范围为0~65535) action 执行操作 [msg:"日志字符串"] 
     
-    note:&&的优先级高于||,先运算完&&再再运算||,每种运算操作从左到右依次执行。
+    note:&的优先级高于|,先运算完&再再运算|,每种运算操作从左到右依次执行。
 rule支持协议:
-    
-    ARP协议支持字段名 type,protocol,hsize,psize,option,shaddress,spaddress,dhaddress,dpaddress
+
     MAC协议支持字段名 src,dst,length,type
+    ARP协议支持字段名 type,protocol,hsize,psize,option,shaddress,spaddress,dhaddress,dpaddress
     IPv4协议支持字段名 src,dst,checksum,protocol,TTL,offset,flags,id,length,TOS,IHL,version
+    IPv6协议支持字段名 dst,src,hlimit,nexthead,length,label,class,version
     TCP协议支持字段名 src,dst,seq,seqack,offset,URG,ACK,PSH,RST,SYN,FIN,window,checksum,urgptr
     UDP协议支持字段名 src,dst,length,checksum
-    IPv6协议支持字段名 dst,src,hlimit,nexthead,length,label,class,version
+
     

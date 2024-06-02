@@ -1,3 +1,4 @@
 IPv4 src 192.168.1.1 dst 192.168.80.0 TTL 128 | IPv6 src AA22:BB11:1122:CDEF:1234:AA99:7654:7410/64
-& TCP dst 80 | UDP dst 8080 priority 10  action drop msg:"Connection allowed%c%c" note2 note3
-IPv4 src 192.168.1.1 dst 192.168.80.0 TTL 128 & TCP dst 80 | UDP dst 9990 priority 101 action drop msg:"Connection allowed%c%c" agwagwhahaahgawgwa
+& TCP dst 80 | UDP dst 8080 priority 10  action drop msg:"Connection allowed%c%c" IPv6.src TCP.src
+
+IPv4 src 192.168.1.1 dst 192.168.80.0 TTL 128 & TCP dst 80 | UDP dst 9990 priority 1010 action drop msg:"Connection allowed"

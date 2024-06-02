@@ -25,7 +25,7 @@ type Rule struct {
 	Priority  int
 	Action    int8
 	Msg       string
-	Strings   []*string
+	Strings   []int
 }
 
 // RuleNode 代表链表中的一个节点,值为一个规则指针

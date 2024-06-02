@@ -43,11 +43,14 @@ func (p *PacketHandler) RecordPacket(rule *ruleStructure.Rule) {
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-
-	err = AppendWriteFile(filepath.Join(folderString, PacketTopProtocol), rule.Msg+"\n")
-	if err != nil {
-		fmt.Println(err.Error())
-	}
+	//fmt.Println(*p.parseMsgStringToString(rule))
+	WriteContentPtr := p.parseMsgStringToString(rule)
+	go func() {
+		err := AppendWriteFile(filepath.Join(folderString, PacketTopProtocol), *WriteContentPtr)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+	}()
 
 	fmt.Println("Recording packet")
 }

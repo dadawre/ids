@@ -1,6 +1,7 @@
 package parserRuler
 
 import (
+	"fmt"
 	"graduationDesign/parser/parserConfig"
 	"graduationDesign/structure/ruleStructure"
 	"regexp"
@@ -38,14 +39,14 @@ func NewRuleParser(ruleStr string, configVar map[string]*parserConfig.ConfigVar)
 		pos:           0,
 		ruleStr:       ruleStr,
 		Tokens:        strings.Fields(ruleStr),
-		protocolRegex: regexp.MustCompile(`\b(Eth|IPv4|IPv6|TCP|UDP)\b`),
+		protocolRegex: regexp.MustCompile(`^(Eth|IPv4|IPv6|TCP|UDP)$`),
 		fieldRegex:    regexp.MustCompile(`(\b)(\w+)\b (\b|\$)(\w+)\b`),
 		operatorRegex: regexp.MustCompile(`[&|]`),
 		priorityRegex: regexp.MustCompile(`priority (\d+)`),
 		actionRegex:   regexp.MustCompile(`action (pass|record|alert|send|drop)`),
 		msgRegex:      regexp.MustCompile(`msg:"([^"]*)"`),
 		msgEndRegex:   regexp.MustCompile(`"$`),
-		stringRegex:   regexp.MustCompile(`\b\w+\b`),
+		stringRegex:   regexp.MustCompile(`(\b|\#).+\b`),
 		ConfigVarsMap: configVar,
 	}
 }
@@ -62,7 +63,6 @@ func (rp *RuleParser) Parse() (*ruleStructure.Rule, error) {
 	if rp.pos >= len(rp.Tokens) {
 		return nil, RuleParserError("parsing completed")
 	}
-
 	result := &ruleStructure.Rule{}
 
 	err := rp.parseProtocols(result)
@@ -90,7 +90,7 @@ func (rp *RuleParser) Parse() (*ruleStructure.Rule, error) {
 		rp.curRule++
 		return result, nil
 	}
-
+	fmt.Println(rp.pos, "     ", rp.Tokens[rp.pos])
 	return nil, RuleParserError("something is invalid value")
 }
 
@@ -102,6 +102,7 @@ func (rp *RuleParser) parseProtocols(result *ruleStructure.Rule) error {
 		rp.pos++
 
 		for rp.pos < len(rp.Tokens) && rp.fieldRegex.MatchString(rp.Tokens[rp.pos]+" "+rp.Tokens[rp.pos+1]) {
+
 			if rp.priorityRegex.MatchString(rp.Tokens[rp.pos] + " " + rp.Tokens[rp.pos+1]) {
 				break
 			}
@@ -155,6 +156,7 @@ func (rp *RuleParser) parsePriorityAndAction(result *ruleStructure.Rule) error {
 
 // parseMsg 解析消息
 func (rp *RuleParser) parseMsg(result *ruleStructure.Rule) error {
+	// 循环到以"结尾的字符串，代表消息结尾
 	endPos := rp.pos
 	for !rp.msgEndRegex.MatchString(rp.Tokens[endPos]) {
 		endPos++
@@ -173,12 +175,20 @@ func (rp *RuleParser) parseMsg(result *ruleStructure.Rule) error {
 
 // parseStrings 解析字符串
 func (rp *RuleParser) parseStrings(result *ruleStructure.Rule) error {
+	if rp.pos >= len(rp.Tokens) || (rp.pos < len(rp.Tokens) && rp.protocolRegex.MatchString(rp.Tokens[rp.pos])) {
+		return nil
+	}
 	for rp.stringRegex.MatchString(rp.Tokens[rp.pos]) {
-		result.Strings = append(result.Strings, &rp.Tokens[rp.pos])
+		//result.Strings = append(result.Strings, &rp.Tokens[rp.pos])
+
+		result.Strings = append(result.Strings, int(MapMsgParaStringToProtocolFieldId[rp.Tokens[rp.pos]]))
+
 		rp.pos++
+
 		if rp.pos >= len(rp.Tokens) || (rp.pos < len(rp.Tokens) && rp.protocolRegex.MatchString(rp.Tokens[rp.pos])) {
 			break
 		}
+
 	}
 	return nil
 }

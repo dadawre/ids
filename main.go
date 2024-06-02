@@ -4,15 +4,14 @@ import (
 	"fmt"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/pcap"
-	"graduationDesign/OSController"
 	"graduationDesign/handler"
 	"graduationDesign/parser/parserConfig"
 	"graduationDesign/parser/parserRuler"
 	"graduationDesign/structure/ruleStructure"
-	"io/ioutil"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 	"strconv"
 	"time"
 )
@@ -28,8 +27,12 @@ var (
 	ConfigVars                map[string]*parserConfig.ConfigVar
 	IncludePaths              []*string
 	ConfigMapNameToValue      map[string]string
-	MapVariableNameToVariable = map[string]interface{}{"max_coroutine": new(int)}
-	LISTRules                 *ruleStructure.RuleLinkedList
+	MapVariableNameToVariable = map[string]interface{}{
+		"max_coroutine": &MaxCoroutine,
+		"config_path":   &ConfigPath,
+		"log_path":      &LogPath,
+	}
+	LISTRules *ruleStructure.RuleLinkedList
 )
 
 func InitializeConfig() {
@@ -48,7 +51,7 @@ func InitializeRules() {
 	LISTRules = &ruleStructure.RuleLinkedList{}
 	parser := parserRuler.NewRuleParser("", ConfigVars)
 	for _, path := range IncludePaths {
-		content, err := ioutil.ReadFile(*path)
+		content, err := os.ReadFile(*path)
 		if err != nil {
 			log.Fatalf("Error reading file: %v", err)
 		}
@@ -73,6 +76,7 @@ func InitializeVariable() {
 			}
 		}
 	}
+	fmt.Println(MaxCoroutine)
 	InitializeMail()
 	handler.LogPath = LogPath
 }
@@ -111,12 +115,27 @@ func getAllNetworkDev() ([]NetworkDevice, error) {
 }
 
 func main() {
-	OSController.GetOSStates(1 * time.Second)
+	//OSController.GetOSStates(1 * time.Second)
 	InitializeConfig()
 	InitializeRules()
 	InitializeVariable()
 
-	inactiveHandle, err := pcap.NewInactiveHandle("\\Device\\NPF_{8809DE90-DC4E-4E82-8495-740651F390A5}")
+	devices, err := getAllNetworkDev()
+	for index, device := range devices {
+		fmt.Println(index, "  ", device.Name, "   ", device.Description)
+	}
+
+	var userChooseDevice int
+	fmt.Println("请输入想要监听的设备ID")
+	_, err = fmt.Scan(&userChooseDevice)
+
+	if err != nil {
+		fmt.Println("输入设备 ID 错误")
+		return
+	}
+	fmt.Println("开始监听设备", devices[userChooseDevice].Description)
+	//inactiveHandle, err := pcap.NewInactiveHandle("\\Device\\NPF_{8809DE90-DC4E-4E82-8495-740651F390A5}")
+	inactiveHandle, err := pcap.NewInactiveHandle(devices[userChooseDevice].Name)
 	if err != nil {
 		log.Fatalf("Error creating inactive handle: %v", err)
 	}

@@ -5,7 +5,6 @@ import (
 	"graduationDesign/parser/parserConfig"
 	"graduationDesign/parser/parserRuler"
 	"graduationDesign/structure/ruleStructure"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -13,7 +12,7 @@ import (
 
 // readFileContent 读取文件内容并返回字符串
 func readFileContent(path string) (string, error) {
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("error reading file %s: %w", path, err)
 	}
@@ -50,8 +49,16 @@ func TestLexical(t *testing.T) {
 
 	// 解析规则
 	parser := parserRuler.NewRuleParser(rule, myConfigparser.ConfigVars)
+
+	//for index, token := range parser.Tokens {
+	//	fmt.Println(index, "   ", token)
+	//}
+
 	result := ruleStructure.RuleLinkedList{}
-	parser.GetAllRule(&result)
+	err = parser.GetAllRule(&result)
+	if err != nil {
+		return
+	}
 	// 打印词法分析结果
 	for index, token := range parser.Tokens {
 		t.Logf("Token %d: %s", index, token)
@@ -74,8 +81,6 @@ func TestLexical(t *testing.T) {
 	for index, token := range parser.Tokens {
 		t.Logf("Token %d: %s", index, token)
 	}
-
-	t.Log("--------------------------------")
 
 	// 打印解析结果
 	for node := result.GetHead(); node != nil; node = node.Next {

@@ -15,7 +15,7 @@ type PacketHandler struct {
 	handlerName                     string
 	isStart                         bool
 	packetChan                      chan *gopacket.Packet
-	layersContain                   gopacket.DecodingLayerContainer
+	layersContainer                 gopacket.DecodingLayerContainer
 	eth                             *layers.Ethernet
 	arp                             *layers.ARP
 	ipv4                            *layers.IPv4
@@ -28,13 +28,14 @@ type PacketHandler struct {
 	decoder                         gopacket.DecodingLayerFunc
 	decoded                         []gopacket.LayerType
 	ruleLinkedList                  *ruleStructure.RuleLinkedList
-	MapLayerTypeToProtocolStructure map[gopacket.LayerType]interface{}
-	RuleBools                       []bool
-	PacketActionMap                 map[int8]func(rule *ruleStructure.Rule)
+	mapLayerTypeToProtocolStructure map[gopacket.LayerType]interface{}
+	ruleBools                       []bool
+	// Action标识符到Action函数的映射
+	packetActionMap map[int8]func(rule *ruleStructure.Rule)
 }
 
+// initialContainer 初始化协议层容器和解码器
 func (p *PacketHandler) initialContainer() {
-
 	p.eth = &layers.Ethernet{}
 	p.arp = &layers.ARP{}
 	p.ipv4 = &layers.IPv4{}
@@ -45,21 +46,21 @@ func (p *PacketHandler) initialContainer() {
 	p.udp = &layers.UDP{}
 	p.dns = &layers.DNS{}
 
-	p.layersContain = gopacket.DecodingLayerContainer(gopacket.DecodingLayerMap{})
-	p.layersContain = p.layersContain.Put(p.eth)
-	p.layersContain = p.layersContain.Put(p.arp)
-	p.layersContain = p.layersContain.Put(p.ipv4)
-	p.layersContain = p.layersContain.Put(p.ipv6)
-	p.layersContain = p.layersContain.Put(p.icmpv4)
-	p.layersContain = p.layersContain.Put(p.icmpv6)
-	p.layersContain = p.layersContain.Put(p.udp)
-	p.layersContain = p.layersContain.Put(p.tcp)
-	p.layersContain = p.layersContain.Put(p.dns)
+	p.layersContainer = gopacket.DecodingLayerContainer(gopacket.DecodingLayerMap{})
+	p.layersContainer = p.layersContainer.Put(p.eth)
+	p.layersContainer = p.layersContainer.Put(p.arp)
+	p.layersContainer = p.layersContainer.Put(p.ipv4)
+	p.layersContainer = p.layersContainer.Put(p.ipv6)
+	p.layersContainer = p.layersContainer.Put(p.icmpv4)
+	p.layersContainer = p.layersContainer.Put(p.icmpv6)
+	p.layersContainer = p.layersContainer.Put(p.udp)
+	p.layersContainer = p.layersContainer.Put(p.tcp)
+	p.layersContainer = p.layersContainer.Put(p.dns)
 
-	p.decoder = p.layersContain.LayersDecoder(layers.LayerTypeEthernet, gopacket.NilDecodeFeedback)
+	p.decoder = p.layersContainer.LayersDecoder(layers.LayerTypeEthernet, gopacket.NilDecodeFeedback)
 	p.decoded = make([]gopacket.LayerType, 0, 20)
 
-	p.MapLayerTypeToProtocolStructure = map[gopacket.LayerType]interface{}{
+	p.mapLayerTypeToProtocolStructure = map[gopacket.LayerType]interface{}{
 		layers.LayerTypeEthernet: p.eth,
 		layers.LayerTypeARP:      p.arp,
 		layers.LayerTypeIPv4:     p.ipv4,
@@ -67,10 +68,9 @@ func (p *PacketHandler) initialContainer() {
 		layers.LayerTypeTCP:      p.tcp,
 		layers.LayerTypeUDP:      p.udp,
 	}
-	p.RuleBools = make([]bool, 10, 10)
+	p.ruleBools = make([]bool, 10)
 
-	// PacketActionMap 创建一个map，将枚举值映射到对应的函数
-	p.PacketActionMap = map[int8]func(rule *ruleStructure.Rule){
+	p.packetActionMap = map[int8]func(rule *ruleStructure.Rule){
 		PacketPassAction:   p.PassPacket,
 		PacketRecordAction: p.RecordPacket,
 		PacketAlertAction:  p.AlertPacket,
@@ -83,17 +83,32 @@ func (p *PacketHandler) initialContainer() {
 func (p *PacketHandler) PayloadMatch() {
 	for node := p.ruleLinkedList.GetHead(); node != nil; node = node.Next {
 		for index, protocol := range node.RuleValue.Protocols {
-			for indexProtocol := range p.decoded {
-				if protocol.NameId == p.decoded[indexProtocol] {
-					p.RuleBools[index] = ruleMatch.MapLayerTypeToMatchFunc[protocol.NameId](protocol, p.MapLayerTypeToProtocolStructure[protocol.NameId])
+			for _, decodedLayer := range p.decoded {
+				if protocol.NameId == decodedLayer {
+					matchFunc, exists := ruleMatch.MapLayerTypeToMatchFunc[protocol.NameId]
+					if !exists {
+						fmt.Printf("No match function for protocol: %v\n", protocol.NameId)
+						continue
+					}
+					p.ruleBools[index] = matchFunc(protocol, p.mapLayerTypeToProtocolStructure[protocol.NameId])
 				}
 			}
 		}
-		logic, _ := ruleMatch.ExecuteLogic(p.RuleBools, node.RuleValue.Operator)
+
+		logic, err := ruleMatch.ExecuteLogic(p.ruleBools, node.RuleValue.Operator)
+		if err != nil {
+			fmt.Printf("Error executing logic: %v\n", err)
+			continue
+		}
 
 		if logic {
-			fmt.Println(p.RuleBools, "    ", node.RuleValue.Operator)
-			p.PacketActionMap[node.RuleValue.Action](node.RuleValue)
+			actionFunc, exists := p.packetActionMap[node.RuleValue.Action]
+			if exists {
+
+				actionFunc(node.RuleValue)
+			} else {
+				fmt.Printf("No action function for action: %d\n", node.RuleValue.Action)
+			}
 			return
 		}
 	}
@@ -102,12 +117,13 @@ func (p *PacketHandler) PayloadMatch() {
 
 // HandlePacket 一个协程函数负责接收数据包并进行解包
 func (p *PacketHandler) HandlePacket() {
-
-	//decoder := p.layersContain.LayersDecoder(layers.LayerTypeEthernet, gopacket.NilDecodeFeedback)
-	//decoded := make([]gopacket.LayerType, 0, 20)
-
 	for packet := range p.packetChan {
-		p.decoder((*packet).Data(), &p.decoded)
+		_, err := p.decoder((*packet).Data(), &p.decoded)
+		if err != nil {
+			fmt.Printf("Error decoding packet: %v\n", err)
+			continue
+		}
+
 		fmt.Println(p.decoded)
 		p.PayloadMatch()
 	}
@@ -115,7 +131,7 @@ func (p *PacketHandler) HandlePacket() {
 
 // StartHandle 开启数据包处理功能
 func (p *PacketHandler) StartHandle() bool {
-	if p.isStart == false {
+	if !p.isStart {
 		go p.HandlePacket()
 		p.isStart = true
 		return true
@@ -124,9 +140,9 @@ func (p *PacketHandler) StartHandle() bool {
 }
 
 // NewHandlerPacket 创建一个新的数据包处理对象
-func NewHandlerPacket(PacketChan chan *gopacket.Packet, handlerName string, ruleList *ruleStructure.RuleLinkedList) *PacketHandler {
+func NewHandlerPacket(packetChan chan *gopacket.Packet, handlerName string, ruleList *ruleStructure.RuleLinkedList) *PacketHandler {
 	newHandlerPacket := &PacketHandler{
-		packetChan:     PacketChan,
+		packetChan:     packetChan,
 		handlerName:    handlerName,
 		isStart:        false,
 		ruleLinkedList: ruleList,

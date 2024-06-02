@@ -87,12 +87,64 @@ func (p ParseFieldError) Error() string {
 	return string(p)
 }
 
-// 定义Ethernet字段标识符
+// 协议字段标识符
 const (
 	EthSrcMACField = iota + 1
 	EthDstMACField
 	EthLengthField
 	EthTypeField
+
+	ARPTypeField = iota + 1
+	ARPProtocolField
+	ARPHwAddressSizeField
+	ARPProtocolAddressSizeField
+	ARPOptionField
+	ARPSourceHwAddressField
+	ARPSourceProtocolAddressField
+	ARPDestHwAddressField
+	ARPDestProtocolAddressField
+
+	IPv4SrcIPField = iota + 1
+	IPv4DstIPField
+	IPv4ChecksumField
+	IPv4ProtocolField
+	IPv4TTLField
+	IPv4OffsetField
+	IPv4FlagField
+	IPv4IDField
+	IPv4TotalLengthField
+	IPv4TOSField
+	IPv4IHLField
+	IPv4VersionField
+
+	IPv6DstField = iota + 1
+	IPv6SrcField
+	IPv6HopLimitField
+	IPv6NextHeadField
+	IPv6LengthField
+	IPv6FlowLabelField
+	IPv6TrafficClassField
+	IPv6VersionField
+
+	TCPSrcPortField = iota + 1
+	TCPDstPortField
+	TCPSequenceField
+	TCPAckSeqField
+	TCPOffsetField
+	TCPUrgField
+	TCPAckField
+	TCPPstField
+	TCPRstField
+	TCPSynField
+	TCPFinField
+	TCPWindowField
+	TCPChecksumField
+	TCPUrgPtrField
+
+	UDPSrcField = iota + 1
+	UDPDstField
+	UDPLengthField
+	UDPChecksumField
 )
 
 func parseEthType(fieldName string) int8 {
@@ -143,22 +195,6 @@ func parseEthFieldValue(fieldType int8, str string) (interface{}, error) {
 		return nil, ParseFieldError("ETH fieldTypeError")
 	}
 }
-
-// 定义IPv4字段标识符
-const (
-	IPv4SrcIPField = iota + 1
-	IPv4DstIPField
-	IPv4ChecksumField
-	IPv4ProtocolField
-	IPv4TTLField
-	IPv4OffsetField
-	IPv4FlagField
-	IPv4IDField
-	IPv4TotalLengthField
-	IPv4TOSField
-	IPv4IHLField
-	IPv4VersionField
-)
 
 func parseIPv4Type(fieldName string) int8 {
 	switch fieldName {
@@ -246,23 +282,6 @@ func parseIPv4FieldValue(fieldType int8, str string) (interface{}, error) {
 	}
 
 }
-
-const (
-	TCPSrcPortField = iota + 1
-	TCPDstPortField
-	TCPSequenceField
-	TCPAckSeqField
-	TCPOffsetField
-	TCPUrgField
-	TCPAckField
-	TCPPstField
-	TCPRstField
-	TCPSynField
-	TCPFinField
-	TCPWindowField
-	TCPChecksumField
-	TCPUrgPtrField
-)
 
 func parseTcpType(fieldName string) int8 {
 	switch fieldName {
@@ -361,13 +380,6 @@ func parseTCPFieldValue(fieldType int8, str string) (interface{}, error) {
 	}
 }
 
-const (
-	UDPSrcField = iota + 1
-	UDPDstField
-	UDPLengthField
-	UDPChecksumField
-)
-
 func parseUDPType(fieldName string) int8 {
 	switch fieldName {
 	case "src":
@@ -407,17 +419,6 @@ func parseUDPFieldValue(fieldType int8, str string) (interface{}, error) {
 		return nil, ParseFieldError("UDP fieldTypeError")
 	}
 }
-
-const (
-	IPv6DstField = iota + 1
-	IPv6SrcField
-	IPv6HopLimitField
-	IPv6NextHeadField
-	IPv6LengthField
-	IPv6FlowLabelField
-	IPv6TrafficClassField
-	IPv6VersionField
-)
 
 func parseIPv6Type(fieldName string) int8 {
 	switch fieldName {
@@ -493,18 +494,6 @@ func parseIPv6FieldValue(fieldType int8, str string) (interface{}, error) {
 		return nil, ParseFieldError("UDP fieldTypeError")
 	}
 }
-
-const (
-	ARPTypeField = iota + 1
-	ARPProtocolField
-	ARPHwAddressSizeField
-	ARPProtocolAddressSizeField
-	ARPOptionField
-	ARPSourceHwAddressField
-	ARPSourceProtocolAddressField
-	ARPDestHwAddressField
-	ARPDestProtocolAddressField
-)
 
 func parseARPType(fieldName string) int8 {
 	switch fieldName {
