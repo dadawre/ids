@@ -1,84 +1,16 @@
-package parserRuler
+package ParserRuler
 
 import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
-	"graduationDesign/parser/parserConfig"
+	"graduationDesign/Parser/ParserConfig"
 
 	"net"
 	"strconv"
 	"strings"
 )
-
-func stringToUint32(s string) (uint32, error) {
-	// 将字符串转换为uint64，第二个参数是进制，第三个参数是位大小
-	u64, err := strconv.ParseUint(s, 10, 32)
-	if err != nil {
-		return 0, err
-	}
-	// 将uint64转换为uint32
-	return uint32(u64), nil
-}
-
-// mapStrToLayerType 协议字符串到协议标识符的映射
-var mapStrToLayerType = map[string]gopacket.LayerType{
-	"Eth":  layers.LayerTypeEthernet,
-	"IPv4": layers.LayerTypeIPv4,
-	"IPv6": layers.LayerTypeIPv6,
-	"TCP":  layers.LayerTypeTCP,
-	"UDP":  layers.LayerTypeUDP,
-}
-
-const (
-	AndOperator = iota + 1
-	OrOperator
-)
-
-// mapStrLogicToInt8 逻辑运算符字符串到int8的映射
-var mapStrLogicToInt8 = map[string]int8{
-	"&": AndOperator,
-	"|": OrOperator,
-}
-
-const (
-	PassAction = iota + 1
-	RecordAction
-	AlertAction
-	SendAction
-	DropAction
-)
-
-// mapStringToAction 行动字符到行动标识符的映射
-var mapStringToAction = map[string]int8{
-	"pass":   PassAction,
-	"record": RecordAction,
-	"alert":  AlertAction,
-	"send":   SendAction,
-	"drop":   DropAction,
-}
-
-// MapLayerTypeToParseFunc 定义协议标识符到协议字段解析函数的映射
-var MapLayerTypeToParseFunc = map[gopacket.LayerType]func(fieldType int8, str string) (interface{}, error){
-	layers.LayerTypeEthernet: parseEthFieldValue,
-	layers.LayerTypeIPv4:     parseIPv4FieldValue,
-	layers.LayerTypeTCP:      parseTCPFieldValue,
-	layers.LayerTypeUDP:      parseUDPFieldValue,
-	layers.LayerTypeIPv6:     parseIPv6FieldValue,
-	layers.LayerTypeARP:      parseARPFieldValue,
-}
-
-// MapLayerTypeTOParseType 协议标识符到协议字段标识符解析函数
-var MapLayerTypeTOParseType = map[gopacket.LayerType]func(fieldName string) int8{
-	layers.LayerTypeEthernet: parseEthType,
-	layers.LayerTypeIPv4:     parseIPv4Type,
-	layers.LayerTypeTCP:      parseTcpType,
-	layers.LayerTypeUDP:      parseUDPType,
-	layers.LayerTypeIPv6:     parseIPv6Type,
-	layers.LayerTypeARP:      parseARPType,
-}
 
 // ParseFieldError 定义解析错误类型
 type ParseFieldError string
@@ -87,65 +19,43 @@ func (p ParseFieldError) Error() string {
 	return string(p)
 }
 
-// 协议字段标识符
-const (
-	EthSrcMACField = iota + 1
-	EthDstMACField
-	EthLengthField
-	EthTypeField
+func parseOSType(fieldName string) int8 {
+	switch fieldName {
+	case "cpu":
+		return OSCpuUsageRateField
+	case "gpu":
+		return OSGpuUsageRateField
+	case "memory":
+		return OSMemoryUsageRateField
+	default:
+		return -1
+	}
+}
 
-	ARPTypeField = iota + 1
-	ARPProtocolField
-	ARPHwAddressSizeField
-	ARPProtocolAddressSizeField
-	ARPOptionField
-	ARPSourceHwAddressField
-	ARPSourceProtocolAddressField
-	ARPDestHwAddressField
-	ARPDestProtocolAddressField
+func parseOSFieldValue(fieldType int8, str string) (interface{}, error) {
+	// 去掉百分号
+	str = strings.TrimSuffix(str, "%")
 
-	IPv4SrcIPField = iota + 1
-	IPv4DstIPField
-	IPv4ChecksumField
-	IPv4ProtocolField
-	IPv4TTLField
-	IPv4OffsetField
-	IPv4FlagField
-	IPv4IDField
-	IPv4TotalLengthField
-	IPv4TOSField
-	IPv4IHLField
-	IPv4VersionField
+	// 将字符串解析为 float64
+	f, err := strconv.ParseFloat(str, 64)
+	if err != nil {
+		fmt.Println("解析错误:", err)
+		return nil, err
+	}
 
-	IPv6DstField = iota + 1
-	IPv6SrcField
-	IPv6HopLimitField
-	IPv6NextHeadField
-	IPv6LengthField
-	IPv6FlowLabelField
-	IPv6TrafficClassField
-	IPv6VersionField
+	switch fieldType {
+	case OSCpuUsageRateField:
+		// 转换为小数形式
+		return f, nil
+	case OSGpuUsageRateField:
+		return f, nil
+	case OSMemoryUsageRateField:
+		return f, nil
+	default:
+		return nil, err
+	}
 
-	TCPSrcPortField = iota + 1
-	TCPDstPortField
-	TCPSequenceField
-	TCPAckSeqField
-	TCPOffsetField
-	TCPUrgField
-	TCPAckField
-	TCPPstField
-	TCPRstField
-	TCPSynField
-	TCPFinField
-	TCPWindowField
-	TCPChecksumField
-	TCPUrgPtrField
-
-	UDPSrcField = iota + 1
-	UDPDstField
-	UDPLengthField
-	UDPChecksumField
-)
+}
 
 func parseEthType(fieldName string) int8 {
 	switch fieldName {
@@ -230,7 +140,7 @@ func parseIPv4Type(fieldName string) int8 {
 func parseIPv4FieldValue(fieldType int8, str string) (interface{}, error) {
 	switch fieldType {
 	case IPv4SrcIPField, IPv4DstIPField:
-		ipNet, err := parserConfig.IPStringToIPNet(str, false)
+		ipNet, err := ParserConfig.IPStringToIPNet(str, false)
 		if err != nil {
 			return nil, err
 		}
@@ -446,7 +356,7 @@ func parseIPv6Type(fieldName string) int8 {
 func parseIPv6FieldValue(fieldType int8, str string) (interface{}, error) {
 	switch fieldType {
 	case IPv6DstField, IPv6SrcField:
-		ipNet, err := parserConfig.IPStringToIPNet(str, false)
+		ipNet, err := ParserConfig.IPStringToIPNet(str, false)
 		if err != nil {
 			return nil, err
 		}
@@ -601,4 +511,15 @@ func parseARPFieldValue(fieldType int8, str string) (interface{}, error) {
 	default:
 		return nil, ParseFieldError("UDP fieldTypeError")
 	}
+}
+
+// 将字符串转换为uint64，第二个参数是进制，第三个参数是位大小
+func stringToUint32(s string) (uint32, error) {
+
+	u64, err := strconv.ParseUint(s, 10, 32)
+	if err != nil {
+		return 0, err
+	}
+	// 将uint64转换为uint32
+	return uint32(u64), nil
 }

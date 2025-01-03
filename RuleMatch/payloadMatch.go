@@ -1,59 +1,13 @@
-package ruleMatch
+package RuleMatch
 
 import (
-	"errors"
-	"fmt"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
-	"graduationDesign/parser/parserRuler"
+	"graduationDesign/OSController"
+	"graduationDesign/Parser/ParserRuler"
 	"graduationDesign/structure/ruleStructure"
 	"net"
 )
-
-// ExecuteLogic evaluates the boolean expression given bools and operators
-// in the order of logical AND first, then logical OR.
-func ExecuteLogic(bools []bool, operators []int8) (bool, error) {
-	if len(bools) == 0 {
-		return false, errors.New("the bool array is empty")
-	}
-	//if len(operators) != len(bools)-1 {
-	//	return false, errors.New("the number of operators must be one less than the number of bools")
-	//}
-
-	// Step 1: Process all && operators
-	andProcessed := []bool{bools[0]}
-	var andOps []int8
-	for i := 0; i < len(operators); i++ {
-		if operators[i] == 1 {
-			andProcessed[len(andProcessed)-1] = andProcessed[len(andProcessed)-1] && bools[i+1]
-		} else {
-			andProcessed = append(andProcessed, bools[i+1])
-			andOps = append(andOps, operators[i])
-		}
-	}
-
-	// Step 2: Process all || operators
-	result := andProcessed[0]
-	for i := 0; i < len(andOps); i++ {
-		if andOps[i] == 2 {
-			result = result || andProcessed[i+1]
-		} else {
-			return false, fmt.Errorf("invalid operator after && processing: %d", andOps[i])
-		}
-	}
-
-	return result, nil
-}
-
-// 比较两个字节数组是否相等
-func bytesEqual[T []byte | net.HardwareAddr](a, b T) bool {
-	for i := 0; i < len(a); i++ {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
-}
 
 // MapLayerTypeToMatchFunc LayerType映射到对应协议的匹配函数
 var MapLayerTypeToMatchFunc = map[gopacket.LayerType]func(protocol *ruleStructure.Protocol, payloadPtr interface{}) bool{
@@ -63,6 +17,7 @@ var MapLayerTypeToMatchFunc = map[gopacket.LayerType]func(protocol *ruleStructur
 	layers.LayerTypeIPv6:     IPv6PayLoadMatch,
 	layers.LayerTypeTCP:      TCPPayLoadMatch,
 	layers.LayerTypeUDP:      UDPPayLoadMatch,
+	10000:                    OSPayLoadMatch,
 }
 
 // MACPayloadMatch 对Mac协议进行匹配
@@ -70,19 +25,19 @@ func MACPayloadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) b
 	mac := payloadPtr.(*layers.Ethernet)
 
 	for _, field := range protocol.Fields {
-		if field.NameId == parserRuler.EthSrcMACField {
+		if field.NameId == ParserRuler.EthSrcMACField {
 			if !bytesEqual(mac.SrcMAC, *field.ValuePtr.(*net.HardwareAddr)) {
 				return false
 			}
-		} else if field.NameId == parserRuler.EthDstMACField {
+		} else if field.NameId == ParserRuler.EthDstMACField {
 			if !bytesEqual(mac.DstMAC, *field.ValuePtr.(*net.HardwareAddr)) {
 				return false
 			}
-		} else if field.NameId == parserRuler.EthLengthField {
+		} else if field.NameId == ParserRuler.EthLengthField {
 			if mac.Length != field.ValuePtr.(uint16) {
 				return false
 			}
-		} else if field.NameId == parserRuler.EthTypeField {
+		} else if field.NameId == ParserRuler.EthTypeField {
 			if mac.EthernetType != field.ValuePtr.(layers.EthernetType) {
 				return false
 			}
@@ -96,39 +51,39 @@ func MACPayloadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) b
 func ARPPayLoadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) bool {
 	arp := payloadPtr.(*layers.ARP)
 	for _, field := range protocol.Fields {
-		if field.NameId == parserRuler.ARPTypeField {
+		if field.NameId == ParserRuler.ARPTypeField {
 			if field.ValuePtr.(layers.LinkType) != arp.AddrType {
 				return false
 			}
-		} else if field.NameId == parserRuler.ARPProtocolField {
+		} else if field.NameId == ParserRuler.ARPProtocolField {
 			if field.ValuePtr.(layers.EthernetType) != arp.Protocol {
 				return false
 			}
-		} else if field.NameId == parserRuler.ARPHwAddressSizeField {
+		} else if field.NameId == ParserRuler.ARPHwAddressSizeField {
 			if field.ValuePtr.(uint8) != arp.HwAddressSize {
 				return false
 			}
-		} else if field.NameId == parserRuler.ARPProtocolAddressSizeField {
+		} else if field.NameId == ParserRuler.ARPProtocolAddressSizeField {
 			if field.ValuePtr.(uint8) != arp.ProtAddressSize {
 				return false
 			}
-		} else if field.NameId == parserRuler.ARPOptionField {
+		} else if field.NameId == ParserRuler.ARPOptionField {
 			if field.ValuePtr.(uint16) != arp.Operation {
 				return false
 			}
-		} else if field.NameId == parserRuler.ARPSourceHwAddressField {
+		} else if field.NameId == ParserRuler.ARPSourceHwAddressField {
 			if !(bytesEqual(field.ValuePtr.([]byte), arp.SourceHwAddress)) {
 				return false
 			}
-		} else if field.NameId == parserRuler.ARPDestHwAddressField {
+		} else if field.NameId == ParserRuler.ARPDestHwAddressField {
 			if !(bytesEqual(field.ValuePtr.([]byte), arp.DstHwAddress)) {
 				return false
 			}
-		} else if field.NameId == parserRuler.ARPSourceProtocolAddressField {
+		} else if field.NameId == ParserRuler.ARPSourceProtocolAddressField {
 			if !(bytesEqual(field.ValuePtr.([]byte), arp.SourceProtAddress)) {
 				return false
 			}
-		} else if field.NameId == parserRuler.ARPDestProtocolAddressField {
+		} else if field.NameId == ParserRuler.ARPDestProtocolAddressField {
 			if !(bytesEqual(field.ValuePtr.([]byte), arp.DstProtAddress)) {
 				return false
 			}
@@ -142,35 +97,35 @@ func ARPPayLoadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) b
 func IPv6PayLoadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) bool {
 	ipv6 := payloadPtr.(*layers.IPv6)
 	for _, field := range protocol.Fields {
-		if field.NameId == parserRuler.IPv6DstField {
+		if field.NameId == ParserRuler.IPv6DstField {
 			if !(field.ValuePtr.(*net.IPNet).Contains(ipv6.DstIP)) {
 				return false
 			}
-		} else if field.NameId == parserRuler.IPv6SrcField {
+		} else if field.NameId == ParserRuler.IPv6SrcField {
 			if !(field.ValuePtr.(*net.IPNet).Contains(ipv6.SrcIP)) {
 				return false
 			}
-		} else if field.NameId == parserRuler.IPv6VersionField {
+		} else if field.NameId == ParserRuler.IPv6VersionField {
 			if field.ValuePtr.(uint8) != ipv6.Version {
 				return false
 			}
-		} else if field.NameId == parserRuler.IPv6TrafficClassField {
+		} else if field.NameId == ParserRuler.IPv6TrafficClassField {
 			if field.ValuePtr.(uint8) != ipv6.TrafficClass {
 				return false
 			}
-		} else if field.NameId == parserRuler.IPv6HopLimitField {
+		} else if field.NameId == ParserRuler.IPv6HopLimitField {
 			if field.ValuePtr.(uint8) != ipv6.HopLimit {
 				return false
 			}
-		} else if field.NameId == parserRuler.IPv6FlowLabelField {
+		} else if field.NameId == ParserRuler.IPv6FlowLabelField {
 			if field.ValuePtr.(uint32) != ipv6.FlowLabel {
 				return false
 			}
-		} else if field.NameId == parserRuler.IPv6LengthField {
+		} else if field.NameId == ParserRuler.IPv6LengthField {
 			if field.ValuePtr.(uint16) != ipv6.Length {
 				return false
 			}
-		} else if field.NameId == parserRuler.IPv6NextHeadField {
+		} else if field.NameId == ParserRuler.IPv6NextHeadField {
 			if field.ValuePtr.(layers.IPProtocol) != ipv6.NextHeader {
 				return false
 			}
@@ -184,51 +139,51 @@ func IPv6PayLoadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) 
 func IPv4PayLoadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) bool {
 	ipv4 := payloadPtr.(*layers.IPv4)
 	for _, field := range protocol.Fields {
-		if field.NameId == parserRuler.IPv4SrcIPField {
+		if field.NameId == ParserRuler.IPv4SrcIPField {
 			if !(field.ValuePtr.(*net.IPNet).Contains(ipv4.SrcIP)) {
 				return false
 			}
-		} else if field.NameId == parserRuler.IPv4DstIPField {
+		} else if field.NameId == ParserRuler.IPv4DstIPField {
 			if !(field.ValuePtr.(*net.IPNet).Contains(ipv4.DstIP)) {
 				return false
 			}
-		} else if field.NameId == parserRuler.IPv4VersionField {
+		} else if field.NameId == ParserRuler.IPv4VersionField {
 			if field.ValuePtr.(uint8) != ipv4.Version {
 				return false
 			}
-		} else if field.NameId == parserRuler.IPv4IHLField {
+		} else if field.NameId == ParserRuler.IPv4IHLField {
 			if field.ValuePtr.(uint8) != ipv4.IHL {
 				return false
 			}
-		} else if field.NameId == parserRuler.IPv4TOSField {
+		} else if field.NameId == ParserRuler.IPv4TOSField {
 			if field.ValuePtr.(uint8) != ipv4.TOS {
 				return false
 			}
-		} else if field.NameId == parserRuler.IPv4TTLField {
+		} else if field.NameId == ParserRuler.IPv4TTLField {
 			if field.ValuePtr.(uint8) != ipv4.TTL {
 				return false
 			}
-		} else if field.NameId == parserRuler.IPv4FlagField {
+		} else if field.NameId == ParserRuler.IPv4FlagField {
 			if field.ValuePtr.(layers.IPv4Flag) != ipv4.Flags {
 				return false
 			}
-		} else if field.NameId == parserRuler.IPv4ProtocolField {
+		} else if field.NameId == ParserRuler.IPv4ProtocolField {
 			if field.ValuePtr.(layers.IPProtocol) != ipv4.Protocol {
 				return false
 			}
-		} else if field.NameId == parserRuler.IPv4TotalLengthField {
+		} else if field.NameId == ParserRuler.IPv4TotalLengthField {
 			if field.ValuePtr.(uint16) != ipv4.Length {
 				return false
 			}
-		} else if field.NameId == parserRuler.IPv4IDField {
+		} else if field.NameId == ParserRuler.IPv4IDField {
 			if field.ValuePtr.(uint16) != ipv4.Id {
 				return false
 			}
-		} else if field.NameId == parserRuler.IPv4OffsetField {
+		} else if field.NameId == ParserRuler.IPv4OffsetField {
 			if field.ValuePtr.(uint16) != ipv4.FragOffset {
 				return false
 			}
-		} else if field.NameId == parserRuler.IPv4ChecksumField {
+		} else if field.NameId == ParserRuler.IPv4ChecksumField {
 			if field.ValuePtr.(uint16) != ipv4.Checksum {
 				return false
 			}
@@ -242,59 +197,59 @@ func IPv4PayLoadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) 
 func TCPPayLoadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) bool {
 	tcp := payloadPtr.(*layers.TCP)
 	for _, field := range protocol.Fields {
-		if field.NameId == parserRuler.TCPSrcPortField {
+		if field.NameId == ParserRuler.TCPSrcPortField {
 			if field.ValuePtr.(layers.TCPPort) != tcp.SrcPort {
 				return false
 			}
-		} else if field.NameId == parserRuler.TCPDstPortField {
+		} else if field.NameId == ParserRuler.TCPDstPortField {
 			if field.ValuePtr.(layers.TCPPort) != tcp.DstPort {
 				return false
 			}
-		} else if field.NameId == parserRuler.TCPAckSeqField {
+		} else if field.NameId == ParserRuler.TCPAckSeqField {
 			if field.ValuePtr.(uint32) != tcp.Ack {
 				return false
 			}
-		} else if field.NameId == parserRuler.TCPSequenceField {
+		} else if field.NameId == ParserRuler.TCPSequenceField {
 			if field.ValuePtr.(uint32) != tcp.Seq {
 				return false
 			}
-		} else if field.NameId == parserRuler.TCPAckField {
+		} else if field.NameId == ParserRuler.TCPAckField {
 			if field.ValuePtr.(bool) != tcp.ACK {
 				return false
 			}
-		} else if field.NameId == parserRuler.TCPSynField {
+		} else if field.NameId == ParserRuler.TCPSynField {
 			if field.ValuePtr.(bool) != tcp.SYN {
 				return false
 			}
-		} else if field.NameId == parserRuler.TCPUrgField {
+		} else if field.NameId == ParserRuler.TCPUrgField {
 			if field.ValuePtr.(bool) != tcp.URG {
 				return false
 			}
-		} else if field.NameId == parserRuler.TCPPstField {
+		} else if field.NameId == ParserRuler.TCPPstField {
 			if field.ValuePtr.(bool) != tcp.PSH {
 				return false
 			}
-		} else if field.NameId == parserRuler.TCPFinField {
+		} else if field.NameId == ParserRuler.TCPFinField {
 			if field.ValuePtr.(bool) != tcp.FIN {
 				return false
 			}
-		} else if field.NameId == parserRuler.TCPRstField {
+		} else if field.NameId == ParserRuler.TCPRstField {
 			if field.ValuePtr.(bool) != tcp.RST {
 				return false
 			}
-		} else if field.NameId == parserRuler.TCPWindowField {
+		} else if field.NameId == ParserRuler.TCPWindowField {
 			if field.ValuePtr.(uint16) != tcp.Window {
 				return false
 			}
-		} else if field.NameId == parserRuler.TCPChecksumField {
+		} else if field.NameId == ParserRuler.TCPChecksumField {
 			if field.ValuePtr.(uint16) != tcp.Checksum {
 				return false
 			}
-		} else if field.NameId == parserRuler.TCPUrgPtrField {
+		} else if field.NameId == ParserRuler.TCPUrgPtrField {
 			if field.ValuePtr.(uint16) != tcp.Urgent {
 				return false
 			}
-		} else if field.NameId == parserRuler.TCPOffsetField {
+		} else if field.NameId == ParserRuler.TCPOffsetField {
 			if field.ValuePtr.(uint8) != tcp.DataOffset {
 				return false
 			}
@@ -308,23 +263,54 @@ func TCPPayLoadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) b
 func UDPPayLoadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) bool {
 	udp := payloadPtr.(*layers.UDP)
 	for _, field := range protocol.Fields {
-		if field.NameId == parserRuler.UDPSrcField {
+		if field.NameId == ParserRuler.UDPSrcField {
 			if field.ValuePtr.(layers.UDPPort) != udp.SrcPort {
 				return false
 			}
-		} else if field.NameId == parserRuler.UDPDstField {
+		} else if field.NameId == ParserRuler.UDPDstField {
 			if field.ValuePtr.(layers.UDPPort) != udp.DstPort {
 				return false
 			}
-		} else if field.NameId == parserRuler.UDPChecksumField {
+		} else if field.NameId == ParserRuler.UDPChecksumField {
 			if field.ValuePtr.(uint16) != udp.Checksum {
 				return false
 			}
-		} else if field.NameId == parserRuler.UDPLengthField {
+		} else if field.NameId == ParserRuler.UDPLengthField {
 			if field.ValuePtr.(uint16) != udp.Length {
 				return false
 			}
 		} else {
+			return false
+		}
+	}
+	return true
+}
+
+func OSPayLoadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) bool {
+	os := payloadPtr.(*OSController.OSState)
+
+	for _, field := range protocol.Fields {
+		if field.NameId == ParserRuler.OSCpuUsageRateField {
+			if field.ValuePtr.(float64) > os.TotalCPUPercent {
+				return false
+			}
+		} else if field.NameId == ParserRuler.OSGpuUsageRateField {
+			if field.ValuePtr.(float64) > os.TotalGPUPercent {
+				return false
+			}
+		} else if field.NameId == ParserRuler.OSMemoryUsageRateField {
+			if field.ValuePtr.(float64) > os.TotalMemPercent {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// 比较两个字节数组是否相等
+func bytesEqual[T []byte | net.HardwareAddr](a, b T) bool {
+	for i := 0; i < len(a); i++ {
+		if a[i] != b[i] {
 			return false
 		}
 	}

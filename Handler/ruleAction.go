@@ -1,4 +1,4 @@
-package handler
+package Handler
 
 import (
 	"fmt"
@@ -22,7 +22,7 @@ const (
 
 func (p *PacketHandler) PassPacket(rule *ruleStructure.Rule) {
 	ReceivePacketCount++
-	fmt.Println("Passing packet  ", ReceivePacketCount)
+	fmt.Println(ReceivePacketCount)
 }
 
 func (p *PacketHandler) RecordPacket(rule *ruleStructure.Rule) {
@@ -51,7 +51,7 @@ func (p *PacketHandler) RecordPacket(rule *ruleStructure.Rule) {
 			fmt.Println(err.Error())
 		}
 	}()
-
+	ReceivePacketCount++
 	fmt.Println("Recording packet")
 }
 

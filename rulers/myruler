@@ -1,8 +1,8 @@
 IPv4 src 192.168.1.1 dst 192.168.80.0/24 TTL 128 priority 10 action pass msg:"Connection allowed src %c  dst %c"  IPv4.src IPv4.dst
 
-Eth src 11:22:33:44:55:66 priority 100 action drop msg:"Cfaagasgssagas"
+Eth src 11:22:33:44:55:66 | OS cpu 10% priority 100 action drop msg:"Cfaagasgssagas"
 
 IPv4 src $thisIpv4 dst 192.168.80.0 TTL 128
 & TCP dst 443 | UDP dst 8080 priority 10  action drop msg:"Connection allowed%c%c" TCP.src TCP.dst
 
-IPv4  TTL 128 | IPv4 TTL 64 | IPv4 TTL 54 priority 1 action record  msg:"Connection src %s dst %s "  IPv4.src IPv4.dst
+( IPv4  TTL 128 | IPv4 TTL 64 ) | IPv4 TTL 54 priority 1 action record  msg:"Connection src %s dst %s "  IPv4.src IPv4.dst

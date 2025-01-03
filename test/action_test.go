@@ -2,14 +2,14 @@ package main
 
 import (
 	"fmt"
-	"graduationDesign/handler"
+	"graduationDesign/Handler"
 	"log"
 	"sync"
 	"testing"
 )
 
 func TestSendMail(t *testing.T) {
-	mail := &(handler.MailSetting{})
+	mail := &(Handler.MailSetting{})
 	mail = mail.SetSmtpHost("smtp.qq.com").SetSmtpPort("587").SetToEmail("3555923360@qq.com")
 	mail = mail.SetAuthEmail("112724772@qq.com").SetAuthPassword("bcernpppsoejbifi")
 	mail = mail.SetSubject("Subject: 测试邮件\n").SetBody(`这是通过Go语言发送的测试邮件。<br><a href="http://192.168.190.42/pikachu/vul/xss/xss_stored.php">点击这里访问链接</a>`)
@@ -20,7 +20,7 @@ func TestSendMail(t *testing.T) {
 }
 
 func TestWriteFile(t *testing.T) {
-	err := handler.AppendWriteFile("./test.txt", "大大大大大大发发生飞洒飞洒发生大2")
+	err := Handler.AppendWriteFile("./test.txt", "大大大大大大发发生飞洒飞洒发生大2")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -32,7 +32,7 @@ func TestTCP(t *testing.T) {
 	wg.Add(1)
 	// Example usage
 	go func() {
-		if err := handler.ReceiveData("9999"); err != nil {
+		if err := Handler.ReceiveData("9999"); err != nil {
 			log.Fatalf("Server error: %v", err)
 		}
 	}()
@@ -44,7 +44,7 @@ func TestTCP(t *testing.T) {
 		"float":  3.14,
 	}
 
-	if err := handler.SendData("192.168.0.209:9999", data); err != nil {
+	if err := Handler.SendData("192.168.0.209:9999", data); err != nil {
 		log.Fatalf("Client error: %v", err)
 	}
 

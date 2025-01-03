@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"graduationDesign/ruleMatch"
+	"graduationDesign/RuleMatch"
 	"net"
 	"testing"
 )
@@ -24,7 +24,7 @@ func TestLogicOperator(t *testing.T) {
 	bools := []bool{true, false, false, true}
 	//operators := []string{"&&", "||", "||"}
 	operators := []int8{0, 1, 0}
-	result, err := ruleMatch.ExecuteLogic(bools, operators)
+	result, err := RuleMatch.EvaluateExpression(bools, operators)
 	if err != nil {
 		fmt.Println("Error:", err)
 	} else {

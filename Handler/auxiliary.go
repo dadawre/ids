@@ -1,4 +1,4 @@
-package handler
+package Handler
 
 import (
 	"bufio"
@@ -11,13 +11,13 @@ import (
 )
 
 type MailSetting struct {
-	smtpHost     string
-	smtpPort     string
-	authEmail    string
-	authPassword string
-	toEmail      string
-	subject      string
-	body         string
+	smtpHost     string //邮箱类型
+	smtpPort     string //邮箱端口
+	authEmail    string //邮箱发送账户
+	authPassword string //邮箱发送账户密码
+	toEmail      string //接收账户
+	subject      string //邮件主题
+	body         string //邮件内容
 }
 
 func (s *MailSetting) SetSmtpHost(smtpHost string) *MailSetting {
@@ -87,7 +87,7 @@ func (s *MailSetting) SendMail() error {
 	return nil
 }
 
-func CreateFile(dirPath string) error {
+func CreateFile(dirPath string) error { //创建文件
 	// 创建文件夹
 	err := os.MkdirAll(dirPath, os.ModePerm)
 	if err != nil {
@@ -97,7 +97,7 @@ func CreateFile(dirPath string) error {
 }
 
 // AppendWriteFile 在指定文件中以append的方式写入字符串
-func AppendWriteFile(path, content string) error {
+func AppendWriteFile(path, content string) error { //写入文件
 	// 打开或创建文件
 	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -128,13 +128,18 @@ func AppendWriteFile(path, content string) error {
 	return nil
 }
 
-// SendData sends data to a specified address
+// SendData 发送数据到特定IP和端口
 func SendData(address string, data map[string]interface{}) error {
 	conn, err := net.Dial("tcp", address)
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
-	defer conn.Close()
+	defer func(conn net.Conn) {
+		err := conn.Close()
+		if err != nil {
+			fmt.Println(err)
+		}
+	}(conn)
 
 	encoder := gob.NewEncoder(conn)
 	if err := encoder.Encode(data); err != nil {
@@ -145,13 +150,18 @@ func SendData(address string, data map[string]interface{}) error {
 	return nil
 }
 
-// ReceiveData listens on the specified port and handles incoming connections
+// ReceiveData 监听端口
 func ReceiveData(port string) error {
 	listener, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		return fmt.Errorf("failed to listen on port: %w", err)
 	}
-	defer listener.Close()
+	defer func(listener net.Listener) {
+		err := listener.Close()
+		if err != nil {
+			fmt.Println(err)
+		}
+	}(listener)
 
 	log.Println("Server started, waiting for connections...")
 
@@ -168,7 +178,12 @@ func ReceiveData(port string) error {
 
 // handleConnection handles a single connection
 func handleConnection(conn net.Conn) {
-	defer conn.Close()
+	defer func(conn net.Conn) {
+		err := conn.Close()
+		if err != nil {
+			fmt.Println(err)
+		}
+	}(conn)
 
 	fmt.Println("Client connected")
 

@@ -21,7 +21,7 @@ type Protocol struct {
 type Rule struct {
 	ID        int
 	Protocols []*Protocol
-	Operator  []int8
+	Operators []int8
 	Priority  int
 	Action    int8
 	Msg       string

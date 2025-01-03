@@ -1,4 +1,4 @@
-package parserConfig
+package ParserConfig
 
 import (
 	"fmt"
@@ -9,25 +9,25 @@ import (
 
 // Configparser 表示配置文件语法分析器
 type Configparser struct {
-	ConfigTokens         *[]Token
-	curr                 int
-	ConfigVars           map[string]*ConfigVar
-	IncludePath          []*string
-	ConfigMapNameToValue map[string]string
+	ConfigTokens         *[]Token              //词法分析器解析出来的Token数组
+	curr                 int                   //当前解析到的位置
+	ConfigVars           map[string]*ConfigVar //变量映射
+	RulePaths            []*string             //规则路径
+	ConfigMapNameToValue map[string]string     //配置变量键值对
 }
 
 // ConfigVar 表示配置变量
 type ConfigVar struct {
-	VarToken *Token
-	VarName  string
-	VarValue interface{}
+	VarToken *Token      //变量标志
+	VarName  string      // 变量名
+	VarValue interface{} // 变量值
 }
 
 // NewConfigparser 新建一个配置文件语法分析器
 func NewConfigparser(tokens *[]Token) *Configparser {
 	return &Configparser{
 		ConfigTokens:         tokens,
-		IncludePath:          []*string{},
+		RulePaths:            []*string{},
 		ConfigVars:           make(map[string]*ConfigVar),
 		ConfigMapNameToValue: make(map[string]string),
 	}
@@ -36,6 +36,7 @@ func NewConfigparser(tokens *[]Token) *Configparser {
 // ParseError 语法分析错误对象
 type ParseError string
 
+// 打印解析错误
 func (s ParseError) Error() string {
 	return fmt.Sprintf("parse error: %s", string(s))
 }
@@ -49,7 +50,7 @@ func (c *Configparser) ParseSelect() error {
 	switch (*c.ConfigTokens)[c.curr].Type {
 	case TokenKeywordInclude:
 		if includeString := c.parseInclude(); includeString != nil {
-			c.IncludePath = append(c.IncludePath, includeString)
+			c.RulePaths = append(c.RulePaths, includeString)
 		} else {
 			return ParseError("something is wrong with parse include")
 		}

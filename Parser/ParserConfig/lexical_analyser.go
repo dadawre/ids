@@ -1,4 +1,4 @@
-package parserConfig
+package ParserConfig
 
 import (
 	"bufio"
@@ -10,60 +10,60 @@ import (
 	"unicode"
 )
 
-// Token represents a lexical token.
+// Token 代表一个词法标志
 type Token struct {
 	Type  TokenType // Token type
 	Value string    // Token value
 }
 
-// TokenType represents the type of a token.
+// TokenType 标志类型
 type TokenType int
 
-// Constants for different token types.
+// 不同标记类型的常量。
 const (
-	TokenEOF TokenType = iota
-	TokenIdentifier
-	TokenKeywordConfig
-	TokenKeywordAny
-	TokenKeywordInclude
-	TokenKeywordIPv4Var
-	TokenKeywordIPv6Var
-	TokenKeywordPortVar
-	TokenKeywordVar
-	TokenStringValue
-	TokenIpv4Value
-	TokenIpv4NetworkValue
-	TokenIpv6Value
-	TokenIpv6NetworkValue
-	TokenVarUse
+	TokenEOF              TokenType = iota //结尾标志
+	TokenIdentifier                        //标识符
+	TokenKeywordConfig                     //config关键字
+	TokenKeywordAny                        //any关键字
+	TokenKeywordInclude                    //include关键字
+	TokenKeywordIPv4Var                    //IPv4关键字
+	TokenKeywordIPv6Var                    //IPv6关键字
+	TokenKeywordPortVar                    //port关键字
+	TokenKeywordVar                        //var关键字
+	TokenStringValue                       //字符串值
+	TokenIpv4Value                         //IPv4值
+	TokenIpv4NetworkValue                  //IPv4网络块值
+	TokenIpv6Value                         //IPv6值
+	TokenIpv6NetworkValue                  //IPv6网络块值
+	TokenVarUse                            //var值
 )
 
-// Regular expressions for different patterns.
+// IP正则表达式
 const (
 	ipv4Pattern      = `^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`
 	ipv4RangePattern = `^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/(3[0-2]|[12]?[0-9])$`
 	ipv6Pattern      = `^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4})|(([0-9a-fA-F]{1,4}:){1,6}:([0-9a-fA-F]{1,4}:){1,6})|(([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,6})|(([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,7})|(([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,8})|(([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,9})|(([0-9a-fA-F]{1,4}:){1}(:[0-9a-fA-F]{1,4}){1,10})|(:((:[0-9a-fA-F]{1,4}){1,11}))$`
 )
 
-// ConfigLexer represents a lexer for configuration files.
+// ConfigLexer 配置文件词法解析
 type ConfigLexer struct {
-	input      string
-	pos        int
-	currLine   int
+	input      string //
+	pos        int    //当前解析位置
+	currLine   int    //当前解析行
 	curr       rune
 	reader     *bufio.Reader
 	file       *os.File
 	CurrTokens []Token
 }
 
-// Custom error type for end-of-file.
+// 自定义解析错误类型。
 type currCharError string
 
 func (e *currCharError) Error() string {
 	return fmt.Sprintf("currCharError: %s", string(*e))
 }
 
-// NextToken returns the next token from the input.
+// NextToken 解析一个标志
 func (l *ConfigLexer) NextToken() (Token, error) {
 	if l.pos != 0 && l.curr == eof {
 		err := currCharError("curr is EOF")
@@ -110,7 +110,7 @@ func (l *ConfigLexer) NextToken() (Token, error) {
 
 }
 
-// isSpecial checks if a character is special.
+// isSpecial 是否是特殊字符
 func (l *ConfigLexer) isSpecial(ch rune) bool {
 	specials := []rune{'{', '}', '$'}
 	for _, s := range specials {
@@ -121,7 +121,7 @@ func (l *ConfigLexer) isSpecial(ch rune) bool {
 	return false
 }
 
-// readChar reads the next character from the input.
+// readChar 读出下一个字符
 func (l *ConfigLexer) readChar() {
 	ch, _, err := l.reader.ReadRune()
 	if err != nil {
@@ -132,21 +132,22 @@ func (l *ConfigLexer) readChar() {
 	l.pos++
 }
 
-// skipWhitespace skips whitespace characters.
+// skipWhitespace 跳空格
 func (l *ConfigLexer) skipWhitespace() {
 	for unicode.IsSpace(l.curr) {
 		l.readChar()
 	}
 }
 
-// skipComment skips comments.
+// skipComment 跳注释
 func (l *ConfigLexer) skipComment() {
 	for l.curr != '\n' && l.curr != eof {
+		//fmt.Println(l.curr)
 		l.readChar()
 	}
 }
 
-// parseIdentifier parses an identifier or keyword.
+// parseIdentifier 解析标识符或关键字。
 func (l *ConfigLexer) parseIdentifier() Token {
 	startPos := l.pos - 1
 	havePoint, haveBias, haveColon := false, false, false
@@ -216,12 +217,12 @@ func (l *ConfigLexer) parseIdentifier() Token {
 
 const eof = rune(0)
 
-// LexerInterface represents the interface for a lexer.
-type LexerInterface interface {
-	Tokenize() []Token
-}
+//// LexerInterface represents the interface for a lexer.
+//type LexerInterface interface {
+//	Tokenize() []Token
+//}
 
-// NewConfigLexer creates a new lexer for the given file path.
+// NewConfigLexer 为给定的文件路径创建一个新的词法分析器
 func NewConfigLexer(path string) *ConfigLexer {
 	file, err := os.Open(path)
 	if err != nil {
@@ -240,10 +241,11 @@ func NewConfigLexer(path string) *ConfigLexer {
 	return &ConfigLexer{reader: reader, input: str, file: file, CurrTokens: []Token{}}
 }
 
-// GetAllToken tokenizes the input and returns the sequence of tokens.
+// GetAllToken 返回解析出的所有标志
 func (l *ConfigLexer) GetAllToken() []Token {
 	for {
 		myToken, _ := l.NextToken()
+		//fmt.Println(myToken.Type, "   ", myToken.Value)
 		if myToken.Type == TokenEOF {
 			break
 		}

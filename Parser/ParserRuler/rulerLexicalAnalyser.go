@@ -1,8 +1,7 @@
-package parserRuler
+package ParserRuler
 
 import (
-	"fmt"
-	"graduationDesign/parser/parserConfig"
+	"graduationDesign/Parser/ParserConfig"
 	"graduationDesign/structure/ruleStructure"
 	"regexp"
 	"strconv"
@@ -11,19 +10,19 @@ import (
 
 // RuleParser 规则解析结构体
 type RuleParser struct {
-	curRule       int
-	pos           int
-	ruleStr       string
-	Tokens        []string
-	protocolRegex *regexp.Regexp
-	fieldRegex    *regexp.Regexp
-	operatorRegex *regexp.Regexp
-	priorityRegex *regexp.Regexp
-	actionRegex   *regexp.Regexp
-	msgRegex      *regexp.Regexp
-	stringRegex   *regexp.Regexp
-	msgEndRegex   *regexp.Regexp
-	ConfigVarsMap map[string]*parserConfig.ConfigVar
+	curRule       int                                //当前是第几个规则
+	pos           int                                //token偏移量
+	ruleStr       string                             //规则输入字符串
+	Tokens        []string                           //输入字符串转化为token
+	protocolRegex *regexp.Regexp                     //协议正则表达式
+	fieldRegex    *regexp.Regexp                     //协议字段正则表达式
+	operatorRegex *regexp.Regexp                     //逻辑表达式运算符正则表达式
+	priorityRegex *regexp.Regexp                     //优先级正则表达式
+	actionRegex   *regexp.Regexp                     //行为正则表达式
+	msgRegex      *regexp.Regexp                     //输出字符串正则表达式
+	stringRegex   *regexp.Regexp                     //string正则表达式
+	msgEndRegex   *regexp.Regexp                     //消息结尾正则表达式
+	ConfigVarsMap map[string]*ParserConfig.ConfigVar //配置变量映射
 }
 
 // RuleParserError 自定义错误类型
@@ -34,14 +33,14 @@ func (e RuleParserError) Error() string {
 }
 
 // NewRuleParser 创建并初始化一个新的 RuleParser
-func NewRuleParser(ruleStr string, configVar map[string]*parserConfig.ConfigVar) *RuleParser {
+func NewRuleParser(ruleStr string, configVar map[string]*ParserConfig.ConfigVar) *RuleParser {
 	return &RuleParser{
 		pos:           0,
 		ruleStr:       ruleStr,
-		Tokens:        strings.Fields(ruleStr),
-		protocolRegex: regexp.MustCompile(`^(Eth|IPv4|IPv6|TCP|UDP)$`),
+		Tokens:        strings.Fields(ruleStr), //将字符串按空格分割开来存到数组中
+		protocolRegex: regexp.MustCompile(`^(Eth|IPv4|IPv6|TCP|UDP|OS)$`),
 		fieldRegex:    regexp.MustCompile(`(\b)(\w+)\b (\b|\$)(\w+)\b`),
-		operatorRegex: regexp.MustCompile(`[&|]`),
+		operatorRegex: regexp.MustCompile(`[&|()]`),
 		priorityRegex: regexp.MustCompile(`priority (\d+)`),
 		actionRegex:   regexp.MustCompile(`action (pass|record|alert|send|drop)`),
 		msgRegex:      regexp.MustCompile(`msg:"([^"]*)"`),
@@ -60,26 +59,31 @@ func (rp *RuleParser) Refresh(ruleStr string) {
 
 // Parse 解析规则
 func (rp *RuleParser) Parse() (*ruleStructure.Rule, error) {
+
 	if rp.pos >= len(rp.Tokens) {
 		return nil, RuleParserError("parsing completed")
 	}
 	result := &ruleStructure.Rule{}
 
+	//fmt.Println(rp.pos, "     ", rp.Tokens[rp.pos])
 	err := rp.parseProtocols(result)
 	if err != nil {
 		return nil, err
 	}
 
+	//fmt.Println(rp.pos, "     ", rp.Tokens[rp.pos])
 	err = rp.parsePriorityAndAction(result)
 	if err != nil {
 		return nil, err
 	}
 
+	//fmt.Println(rp.pos, "     ", rp.Tokens[rp.pos])
 	err = rp.parseMsg(result)
 	if err != nil {
 		return nil, err
 	}
 
+	//fmt.Println(rp.pos, "     ", rp.Tokens[rp.pos])
 	err = rp.parseStrings(result)
 	if err != nil {
 		return nil, err
@@ -90,54 +94,69 @@ func (rp *RuleParser) Parse() (*ruleStructure.Rule, error) {
 		rp.curRule++
 		return result, nil
 	}
-	fmt.Println(rp.pos, "     ", rp.Tokens[rp.pos])
+
 	return nil, RuleParserError("something is invalid value")
 }
 
 // parseProtocols 解析协议部分
 func (rp *RuleParser) parseProtocols(result *ruleStructure.Rule) error {
-	for rp.protocolRegex.MatchString(rp.Tokens[rp.pos]) {
-		protocol := rp.Tokens[rp.pos]
-		p := ruleStructure.Protocol{NameId: mapStrToLayerType[protocol]}
-		rp.pos++
+	for true {
+		if rp.protocolRegex.MatchString(rp.Tokens[rp.pos]) { //解析协议字符串
+			//fmt.Println(rp.pos, "     ", rp.Tokens[rp.pos])
+			result.Operators = append(result.Operators, BoolPlaceholder)
 
-		for rp.pos < len(rp.Tokens) && rp.fieldRegex.MatchString(rp.Tokens[rp.pos]+" "+rp.Tokens[rp.pos+1]) {
+			protocol := rp.Tokens[rp.pos]
+			p := ruleStructure.Protocol{NameId: mapStrToLayerType[protocol]}
+			rp.pos++
 
-			if rp.priorityRegex.MatchString(rp.Tokens[rp.pos] + " " + rp.Tokens[rp.pos+1]) {
-				break
-			}
-			field := MapLayerTypeTOParseType[p.NameId](rp.Tokens[rp.pos])
-			tokenValue := rp.Tokens[rp.pos+1]
+			for rp.pos < len(rp.Tokens) && rp.fieldRegex.MatchString(rp.Tokens[rp.pos]+" "+rp.Tokens[rp.pos+1]) {
 
-			if tokenValue[0] == '$' {
-				tokenValue = tokenValue[1:]
-				value := rp.ConfigVarsMap[tokenValue].VarValue
-				if value != nil {
+				if rp.priorityRegex.MatchString(rp.Tokens[rp.pos] + " " + rp.Tokens[rp.pos+1]) {
+					break
+				}
+				//fmt.Println(rp.pos, "   a  ", rp.Tokens[rp.pos])
+				field := MapLayerTypeToParseType[p.NameId](rp.Tokens[rp.pos])
+				tokenValue := rp.Tokens[rp.pos+1]
+
+				if tokenValue[0] == '$' {
+					tokenValue = tokenValue[1:]
+					value := rp.ConfigVarsMap[tokenValue].VarValue
+					if value != nil {
+						p.Fields = append(p.Fields, &(ruleStructure.Field{NameId: field, ValuePtr: value}))
+					}
+				} else {
+					if rp.priorityRegex.MatchString(rp.Tokens[rp.pos] + " " + rp.Tokens[rp.pos+1]) {
+						break
+					}
+
+					value, err := MapLayerTypeToParseFunc[p.NameId](field, rp.Tokens[rp.pos+1])
+					if err != nil {
+						return err
+					}
 					p.Fields = append(p.Fields, &(ruleStructure.Field{NameId: field, ValuePtr: value}))
 				}
-			} else {
-				value, err := MapLayerTypeToParseFunc[p.NameId](field, rp.Tokens[rp.pos+1])
-				if err != nil {
-					return err
-				}
-				p.Fields = append(p.Fields, &(ruleStructure.Field{NameId: field, ValuePtr: value}))
+				rp.pos += 2
 			}
-			rp.pos += 2
-		}
-		result.Protocols = append(result.Protocols, &p)
-
-		if rp.operatorRegex.MatchString(rp.Tokens[rp.pos]) {
-			result.Operator = append(result.Operator, mapStrLogicToInt8[rp.Tokens[rp.pos]])
+			result.Protocols = append(result.Protocols, &p)
+		} else if rp.operatorRegex.MatchString(rp.Tokens[rp.pos]) { //解析逻辑运算符字符串
+			//fmt.Println(rp.pos, "   b  ", rp.Tokens[rp.pos])
+			result.Operators = append(result.Operators, mapStrLogicToInt8[rp.Tokens[rp.pos]])
+			//fmt.Println(result.Operators)
 			rp.pos++
 			continue
+		} else {
+			//fmt.Println(rp.pos, "   c  ", rp.Tokens[rp.pos])
+			break
 		}
-		break
+
 	}
 	return nil
 }
 
 // parsePriorityAndAction 解析优先级和动作
 func (rp *RuleParser) parsePriorityAndAction(result *ruleStructure.Rule) error {
+	//fmt.Println(rp.pos, "   a  ", rp.Tokens[rp.pos])
+
 	if rp.pos+2 < len(rp.Tokens) {
 		if rp.priorityRegex.MatchString(strings.Join(rp.Tokens[rp.pos:rp.pos+2], " ")) {
 			priority, _ := strconv.Atoi(rp.priorityRegex.FindStringSubmatch(strings.Join(rp.Tokens[rp.pos:rp.pos+2], " "))[1])
@@ -156,6 +175,8 @@ func (rp *RuleParser) parsePriorityAndAction(result *ruleStructure.Rule) error {
 
 // parseMsg 解析消息
 func (rp *RuleParser) parseMsg(result *ruleStructure.Rule) error {
+	//fmt.Println(rp.pos, "   b  ", rp.Tokens[rp.pos])
+
 	// 循环到以"结尾的字符串，代表消息结尾
 	endPos := rp.pos
 	for !rp.msgEndRegex.MatchString(rp.Tokens[endPos]) {
@@ -175,19 +196,21 @@ func (rp *RuleParser) parseMsg(result *ruleStructure.Rule) error {
 
 // parseStrings 解析字符串
 func (rp *RuleParser) parseStrings(result *ruleStructure.Rule) error {
+	//fmt.Println(rp.pos, "   c  ", rp.Tokens[rp.pos])
+
 	if rp.pos >= len(rp.Tokens) || (rp.pos < len(rp.Tokens) && rp.protocolRegex.MatchString(rp.Tokens[rp.pos])) {
 		return nil
 	}
-	for rp.stringRegex.MatchString(rp.Tokens[rp.pos]) {
+	for rp.pos < len(rp.Tokens) && rp.stringRegex.MatchString(rp.Tokens[rp.pos]) {
 		//result.Strings = append(result.Strings, &rp.Tokens[rp.pos])
 
-		result.Strings = append(result.Strings, int(MapMsgParaStringToProtocolFieldId[rp.Tokens[rp.pos]]))
-
-		rp.pos++
-
 		if rp.pos >= len(rp.Tokens) || (rp.pos < len(rp.Tokens) && rp.protocolRegex.MatchString(rp.Tokens[rp.pos])) {
+			//fmt.Println(6666)
 			break
 		}
+		result.Strings = append(result.Strings, int(MapMsgParaStringToProtocolFieldId[rp.Tokens[rp.pos]]))
+		//fmt.Println(rp.pos, "   fff  ", rp.Tokens[rp.pos],"    ")
+		rp.pos++
 
 	}
 	return nil
@@ -195,8 +218,8 @@ func (rp *RuleParser) parseStrings(result *ruleStructure.Rule) error {
 
 // isValidRule 检查规则的有效性
 func (rp *RuleParser) isValidRule(result *ruleStructure.Rule) bool {
-	return (result.Msg != "" && result.Action != PassAction && result.Action != 0 || result.Action == PassAction) &&
-		len(result.Protocols) == len(result.Operator)+1 &&
+	//fmt.Println(rp.pos, "   d  ", rp.Tokens[rp.pos])
+	return ((result.Msg != "" && result.Action != PassAction && result.Action != 0) || result.Action == PassAction) &&
 		result.Priority != 0
 }
 

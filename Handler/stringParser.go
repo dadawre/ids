@@ -1,9 +1,9 @@
-package handler
+package Handler
 
 import (
 	"encoding/hex"
 	"fmt"
-	"graduationDesign/parser/parserRuler"
+	"graduationDesign/Parser/ParserRuler"
 	"graduationDesign/structure/ruleStructure"
 	"strconv"
 )
@@ -12,17 +12,17 @@ func (p *PacketHandler) parseMsgStringToString(rule *ruleStructure.Rule) *string
 	result := make([]any, 0, 0)
 	var str string
 	for _, stringId := range rule.Strings {
-		if stringId >= parserRuler.EthSrcMACField && stringId <= parserRuler.EthTypeField {
+		if stringId >= ParserRuler.EthSrcMACField && stringId <= ParserRuler.EthTypeField {
 			str = *p.MacStringParse(stringId)
-		} else if stringId >= parserRuler.ARPTypeField && stringId <= parserRuler.ARPDestProtocolAddressField {
+		} else if stringId >= ParserRuler.ARPTypeField && stringId <= ParserRuler.ARPDestProtocolAddressField {
 			str = *p.ARPStringParse(stringId)
-		} else if stringId >= parserRuler.IPv4SrcIPField && stringId <= parserRuler.IPv4VersionField {
+		} else if stringId >= ParserRuler.IPv4SrcIPField && stringId <= ParserRuler.IPv4VersionField {
 			str = *p.IPv4StringParse(stringId)
-		} else if stringId >= parserRuler.IPv6DstField && stringId <= parserRuler.IPv6VersionField {
+		} else if stringId >= ParserRuler.IPv6DstField && stringId <= ParserRuler.IPv6VersionField {
 			str = *p.IPv6StringParse(stringId)
-		} else if stringId >= parserRuler.TCPSrcPortField && stringId <= parserRuler.TCPUrgPtrField {
+		} else if stringId >= ParserRuler.TCPSrcPortField && stringId <= ParserRuler.TCPUrgPtrField {
 			str = *p.TCPStringParse(stringId)
-		} else if stringId >= parserRuler.UDPSrcField && stringId <= parserRuler.UDPChecksumField {
+		} else if stringId >= ParserRuler.UDPSrcField && stringId <= ParserRuler.UDPChecksumField {
 			str = *p.UDPStringParse(stringId)
 		} else {
 			return nil
@@ -39,13 +39,13 @@ func (p *PacketHandler) parseMsgStringToString(rule *ruleStructure.Rule) *string
 
 func (p *PacketHandler) MacStringParse(stringId int) *string {
 	str := new(string)
-	if stringId == parserRuler.EthSrcMACField {
+	if stringId == ParserRuler.EthSrcMACField {
 		*str = p.eth.SrcMAC.String()
-	} else if stringId == parserRuler.EthDstMACField {
+	} else if stringId == ParserRuler.EthDstMACField {
 		*str = p.eth.DstMAC.String()
-	} else if stringId == parserRuler.EthLengthField {
+	} else if stringId == ParserRuler.EthLengthField {
 		*str = strconv.Itoa(int(p.eth.Length))
-	} else if stringId == parserRuler.EthTypeField {
+	} else if stringId == ParserRuler.EthTypeField {
 		*str = p.eth.EthernetType.String()
 	} else {
 		return nil
@@ -55,23 +55,23 @@ func (p *PacketHandler) MacStringParse(stringId int) *string {
 
 func (p *PacketHandler) ARPStringParse(stringID int) *string {
 	str := new(string)
-	if stringID == parserRuler.ARPTypeField {
+	if stringID == ParserRuler.ARPTypeField {
 		*str = p.arp.AddrType.String()
-	} else if stringID == parserRuler.ARPProtocolField {
+	} else if stringID == ParserRuler.ARPProtocolField {
 		*str = p.arp.Protocol.String()
-	} else if stringID == parserRuler.ARPHwAddressSizeField {
+	} else if stringID == ParserRuler.ARPHwAddressSizeField {
 		*str = strconv.Itoa(int(p.arp.HwAddressSize))
-	} else if stringID == parserRuler.ARPProtocolAddressSizeField {
+	} else if stringID == ParserRuler.ARPProtocolAddressSizeField {
 		*str = strconv.Itoa(int(p.arp.ProtAddressSize))
-	} else if stringID == parserRuler.ARPOptionField {
+	} else if stringID == ParserRuler.ARPOptionField {
 		*str = strconv.Itoa(int(p.arp.Operation))
-	} else if stringID == parserRuler.ARPSourceHwAddressField {
+	} else if stringID == ParserRuler.ARPSourceHwAddressField {
 		*str = hex.EncodeToString(p.arp.SourceHwAddress)
-	} else if stringID == parserRuler.ARPSourceProtocolAddressField {
+	} else if stringID == ParserRuler.ARPSourceProtocolAddressField {
 		*str = hex.EncodeToString(p.arp.SourceProtAddress)
-	} else if stringID == parserRuler.ARPDestHwAddressField {
+	} else if stringID == ParserRuler.ARPDestHwAddressField {
 		*str = hex.EncodeToString(p.arp.DstHwAddress)
-	} else if stringID == parserRuler.ARPDestProtocolAddressField {
+	} else if stringID == ParserRuler.ARPDestProtocolAddressField {
 		*str = hex.EncodeToString(p.arp.DstProtAddress)
 	} else {
 		return nil
@@ -81,29 +81,29 @@ func (p *PacketHandler) ARPStringParse(stringID int) *string {
 
 func (p *PacketHandler) IPv4StringParse(stringID int) *string {
 	str := new(string)
-	if stringID == parserRuler.IPv4SrcIPField {
+	if stringID == ParserRuler.IPv4SrcIPField {
 		*str = p.ipv4.SrcIP.String()
-	} else if stringID == parserRuler.IPv4DstIPField {
+	} else if stringID == ParserRuler.IPv4DstIPField {
 		*str = p.ipv4.DstIP.String()
-	} else if stringID == parserRuler.IPv4ChecksumField {
+	} else if stringID == ParserRuler.IPv4ChecksumField {
 		*str = strconv.Itoa(int(p.ipv4.Checksum))
-	} else if stringID == parserRuler.IPv4ProtocolField {
+	} else if stringID == ParserRuler.IPv4ProtocolField {
 		*str = p.ipv4.Protocol.String()
-	} else if stringID == parserRuler.IPv4TTLField {
+	} else if stringID == ParserRuler.IPv4TTLField {
 		*str = strconv.Itoa(int(p.ipv4.TTL))
-	} else if stringID == parserRuler.IPv4OffsetField {
+	} else if stringID == ParserRuler.IPv4OffsetField {
 		*str = strconv.Itoa(int(p.ipv4.FragOffset))
-	} else if stringID == parserRuler.IPv4FlagField {
+	} else if stringID == ParserRuler.IPv4FlagField {
 		*str = p.ipv4.Flags.String()
-	} else if stringID == parserRuler.IPv4IDField {
+	} else if stringID == ParserRuler.IPv4IDField {
 		*str = strconv.Itoa(int(p.ipv4.Id))
-	} else if stringID == parserRuler.IPv4TotalLengthField {
+	} else if stringID == ParserRuler.IPv4TotalLengthField {
 		*str = strconv.Itoa(int(p.ipv4.Length))
-	} else if stringID == parserRuler.IPv4TOSField {
+	} else if stringID == ParserRuler.IPv4TOSField {
 		*str = strconv.Itoa(int(p.ipv4.TOS))
-	} else if stringID == parserRuler.IPv4IHLField {
+	} else if stringID == ParserRuler.IPv4IHLField {
 		*str = strconv.Itoa(int(p.ipv4.IHL))
-	} else if stringID == parserRuler.IPv4VersionField {
+	} else if stringID == ParserRuler.IPv4VersionField {
 		*str = strconv.Itoa(int(p.ipv4.Version))
 	} else {
 		return nil
@@ -113,21 +113,21 @@ func (p *PacketHandler) IPv4StringParse(stringID int) *string {
 
 func (p *PacketHandler) IPv6StringParse(stringID int) *string {
 	str := new(string)
-	if stringID == parserRuler.IPv6DstField {
+	if stringID == ParserRuler.IPv6DstField {
 		*str = p.ipv6.SrcIP.String()
-	} else if stringID == parserRuler.IPv6SrcField {
+	} else if stringID == ParserRuler.IPv6SrcField {
 		*str = p.ipv6.DstIP.String()
-	} else if stringID == parserRuler.IPv6HopLimitField {
+	} else if stringID == ParserRuler.IPv6HopLimitField {
 		*str = strconv.Itoa(int(p.ipv6.HopLimit))
-	} else if stringID == parserRuler.IPv6NextHeadField {
+	} else if stringID == ParserRuler.IPv6NextHeadField {
 		*str = p.ipv6.NextHeader.String()
-	} else if stringID == parserRuler.IPv6LengthField {
+	} else if stringID == ParserRuler.IPv6LengthField {
 		*str = strconv.Itoa(int(p.ipv6.Length))
-	} else if stringID == parserRuler.IPv6FlowLabelField {
+	} else if stringID == ParserRuler.IPv6FlowLabelField {
 		*str = strconv.Itoa(int(p.ipv6.FlowLabel))
-	} else if stringID == parserRuler.IPv6TrafficClassField {
+	} else if stringID == ParserRuler.IPv6TrafficClassField {
 		*str = strconv.Itoa(int(p.ipv6.TrafficClass))
-	} else if stringID == parserRuler.IPv6VersionField {
+	} else if stringID == ParserRuler.IPv6VersionField {
 		*str = strconv.Itoa(int(p.ipv6.Version))
 	} else {
 		return nil
@@ -137,57 +137,57 @@ func (p *PacketHandler) IPv6StringParse(stringID int) *string {
 
 func (p *PacketHandler) TCPStringParse(stringID int) *string {
 	str := new(string)
-	if stringID == parserRuler.TCPSrcPortField {
+	if stringID == ParserRuler.TCPSrcPortField {
 		*str = strconv.Itoa(int(p.tcp.SrcPort))
-	} else if stringID == parserRuler.TCPDstPortField {
+	} else if stringID == ParserRuler.TCPDstPortField {
 		*str = strconv.Itoa(int(p.tcp.DstPort))
-	} else if stringID == parserRuler.TCPSequenceField {
+	} else if stringID == ParserRuler.TCPSequenceField {
 		*str = strconv.Itoa(int(p.tcp.Seq))
-	} else if stringID == parserRuler.TCPAckSeqField {
+	} else if stringID == ParserRuler.TCPAckSeqField {
 		*str = strconv.Itoa(int(p.tcp.Ack))
-	} else if stringID == parserRuler.TCPOffsetField {
+	} else if stringID == ParserRuler.TCPOffsetField {
 		*str = strconv.Itoa(int(p.tcp.DataOffset))
-	} else if stringID == parserRuler.TCPUrgField {
+	} else if stringID == ParserRuler.TCPUrgField {
 		if p.tcp.URG {
 			*str = "true"
 		} else {
 			*str = "false"
 		}
-	} else if stringID == parserRuler.TCPAckField {
+	} else if stringID == ParserRuler.TCPAckField {
 		if p.tcp.ACK {
 			*str = "true"
 		} else {
 			*str = "false"
 		}
-	} else if stringID == parserRuler.TCPPstField {
+	} else if stringID == ParserRuler.TCPPstField {
 		if p.tcp.PSH {
 			*str = "true"
 		} else {
 			*str = "false"
 		}
-	} else if stringID == parserRuler.TCPRstField {
+	} else if stringID == ParserRuler.TCPRstField {
 		if p.tcp.RST {
 			*str = "true"
 		} else {
 			*str = "false"
 		}
-	} else if stringID == parserRuler.TCPSynField {
+	} else if stringID == ParserRuler.TCPSynField {
 		if p.tcp.SYN {
 			*str = "true"
 		} else {
 			*str = "false"
 		}
-	} else if stringID == parserRuler.TCPFinField {
+	} else if stringID == ParserRuler.TCPFinField {
 		if p.tcp.FIN {
 			*str = "true"
 		} else {
 			*str = "false"
 		}
-	} else if stringID == parserRuler.TCPWindowField {
+	} else if stringID == ParserRuler.TCPWindowField {
 		*str = strconv.Itoa(int(p.tcp.Window))
-	} else if stringID == parserRuler.TCPChecksumField {
+	} else if stringID == ParserRuler.TCPChecksumField {
 		*str = strconv.Itoa(int(p.tcp.Checksum))
-	} else if stringID == parserRuler.TCPUrgPtrField {
+	} else if stringID == ParserRuler.TCPUrgPtrField {
 		*str = strconv.Itoa(int(p.tcp.Urgent))
 	} else {
 		return nil
@@ -197,13 +197,13 @@ func (p *PacketHandler) TCPStringParse(stringID int) *string {
 
 func (p *PacketHandler) UDPStringParse(stringID int) *string {
 	str := new(string)
-	if stringID == parserRuler.UDPSrcField {
+	if stringID == ParserRuler.UDPSrcField {
 		*str = strconv.Itoa(int(p.udp.SrcPort))
-	} else if stringID == parserRuler.UDPDstField {
+	} else if stringID == ParserRuler.UDPDstField {
 		*str = strconv.Itoa(int(p.udp.DstPort))
-	} else if stringID == parserRuler.UDPLengthField {
+	} else if stringID == ParserRuler.UDPLengthField {
 		*str = strconv.Itoa(int(p.udp.Length))
-	} else if stringID == parserRuler.UDPChecksumField {
+	} else if stringID == ParserRuler.UDPChecksumField {
 		*str = strconv.Itoa(int(p.udp.Checksum))
 	} else {
 		return nil

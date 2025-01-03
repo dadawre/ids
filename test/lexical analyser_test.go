@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"graduationDesign/parser/parserConfig"
+	"graduationDesign/Parser/ParserConfig"
 	"os"
 	"testing"
 )
@@ -14,12 +14,16 @@ func TestConfigLexer(t *testing.T) {
 		fmt.Println("Error opening file:", err)
 		return
 	}
-	defer file.Close()
-
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			fmt.Println(err)
+		}
+	}(file)
 	//reader := bufio.NewReader(file)
 	// 创建一个bufio.Reader
 
-	myConfigLexer := parserConfig.NewConfigLexer("../conf/ids.conf")
+	myConfigLexer := ParserConfig.NewConfigLexer("../conf/ids.conf")
 	//myTokens := make([]parser.Token, 0, 0)
 
 	//for {
@@ -29,10 +33,11 @@ func TestConfigLexer(t *testing.T) {
 	//	}
 	//	myTokens = append(myTokens, myToken)
 	//}
-	fmt.Println(myConfigLexer.GetAllToken())
-	fmt.Println(myConfigLexer.GetAllToken())
-	fmt.Println(myConfigLexer.GetAllToken())
-	fmt.Println(myConfigLexer.GetAllToken())
+	//fmt.Println(myConfigLexer.GetAllToken())
+	//fmt.Println(myConfigLexer.GetAllToken())
+	//fmt.Println(myConfigLexer.GetAllToken())
+	//fmt.Println(myConfigLexer.GetAllToken())
+	//fmt.Println(myConfigLexer.GetAllToken())
 	fmt.Println(myConfigLexer.GetAllToken())
 
 	//fmt.Println(myConfigLexer.CurrTokens)

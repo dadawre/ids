@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"graduationDesign/parser/parserConfig"
-	"graduationDesign/parser/parserRuler"
+	"graduationDesign/Parser/ParserConfig"
+	"graduationDesign/Parser/ParserRuler"
 	"graduationDesign/structure/ruleStructure"
 	"os"
 	"strings"
@@ -27,14 +27,19 @@ func TestLexical(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error opening file %s: %v", configPath, err)
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			fmt.Printf(err.Error())
+		}
+	}(file)
 
 	// 词法分析
-	myConfigLexer := parserConfig.NewConfigLexer(configPath)
+	myConfigLexer := ParserConfig.NewConfigLexer(configPath)
 	tokens := myConfigLexer.GetAllToken()
 
 	// 语法分析
-	myConfigparser := parserConfig.NewConfigparser(&tokens)
+	myConfigparser := ParserConfig.NewConfigparser(&tokens)
 	myConfigparser.ParseAllTokens()
 	//if err := myConfigparser.ParseAllTokens(); err != nil {
 	//	t.Fatalf("Error parsing tokens: %v", err)
@@ -48,7 +53,7 @@ func TestLexical(t *testing.T) {
 	}
 
 	// 解析规则
-	parser := parserRuler.NewRuleParser(rule, myConfigparser.ConfigVars)
+	parser := ParserRuler.NewRuleParser(rule, myConfigparser.ConfigVars)
 
 	//for index, token := range parser.Tokens {
 	//	fmt.Println(index, "   ", token)
@@ -63,6 +68,8 @@ func TestLexical(t *testing.T) {
 	for index, token := range parser.Tokens {
 		t.Logf("Token %d: %s", index, token)
 	}
+
+	fmt.Println("----------------------------------------------")
 
 	// 读取规则文件
 	rulePath = "../rulers/backrule"
@@ -85,7 +92,15 @@ func TestLexical(t *testing.T) {
 	// 打印解析结果
 	for node := result.GetHead(); node != nil; node = node.Next {
 		t.Logf("\nID: %d\nMsg: %s\nAction: %d\nPriority: %d\nOperator: %v\nProtocols: %v\nStrings: %v\n--------------------------------",
-			node.RuleValue.ID, node.RuleValue.Msg, node.RuleValue.Action, node.RuleValue.Priority, node.RuleValue.Operator, node.RuleValue.Protocols, node.RuleValue.Strings)
+			node.RuleValue.ID, node.RuleValue.Msg, node.RuleValue.Action, node.RuleValue.Priority, node.RuleValue.Operators, node.RuleValue.Protocols, node.RuleValue.Strings)
+		for _, protocol := range node.RuleValue.Protocols {
+			fmt.Print(protocol.NameId, ":   ")
+			for _, field := range protocol.Fields {
+				fmt.Print(*field, "  ")
+			}
+			fmt.Print(" | ")
+		}
+		fmt.Println()
 	}
 }
 
