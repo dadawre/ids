@@ -90,7 +90,7 @@ func (l *ConfigLexer) NextToken() (Token, error) {
 			break
 		}
 
-		if unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) || l.curr == '$' || l.curr == '/' || l.curr == '_' || l.curr == '.' || l.curr == '[' || l.curr == ']' || l.curr == ',' {
+		if unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) || l.curr == '$' || l.curr == '/' || l.curr == '_' || l.curr == '.' || l.curr == '[' || l.curr == ']' || l.curr == ',' || l.curr == '@' {
 			currToken := l.parseIdentifier()
 			l.CurrTokens = append(l.CurrTokens, currToken)
 			return currToken, nil
@@ -155,14 +155,14 @@ func (l *ConfigLexer) parseIdentifier() Token {
 	var haveDollar = l.curr == '$'
 	if haveDollar {
 		l.readChar()
-		for unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) || l.curr == '_' {
+		for unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) || l.curr == '_' || l.curr == '@' {
 			l.readChar()
 		}
 		identifier := l.input[startPos+1 : l.pos-1]
 		return Token{Type: TokenVarUse, Value: identifier}
 	}
 
-	for unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) || l.curr == '.' || l.curr == '/' || l.curr == ':' || l.curr == '_' || l.curr == '[' || l.curr == ']' || l.curr == ',' {
+	for unicode.IsLetter(l.curr) || unicode.IsDigit(l.curr) || l.curr == '.' || l.curr == '/' || l.curr == ':' || l.curr == '_' || l.curr == '[' || l.curr == ']' || l.curr == ',' || l.curr == '@' {
 		havePoint = havePoint || l.curr == '.'
 		haveBias = haveBias || l.curr == '/'
 		haveColon = haveColon || l.curr == ':'

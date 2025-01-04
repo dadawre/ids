@@ -3,8 +3,10 @@ package Handler
 import (
 	"fmt"
 	"github.com/google/gopacket/layers"
+	"graduationDesign/Initialize"
 	"graduationDesign/structure/ruleStructure"
 	"path/filepath"
+	"strings"
 )
 
 var ReceivePacketCount = 0
@@ -26,18 +28,18 @@ func (p *PacketHandler) PassPacket(rule *ruleStructure.Rule) {
 }
 
 func (p *PacketHandler) RecordPacket(rule *ruleStructure.Rule) {
-	PacketTopProtocol := p.decoded[len(p.decoded)-1].String()
-	var PacketID string
+	PacketTopProtocol := p.decoded[len(p.decoded)-1].String() //顶端协议
+	var PacketFileName string
 
 	if p.decoded[1] == layers.LayerTypeIPv4 {
-		PacketID = p.ipv4.SrcIP.String()
+		PacketFileName = p.ipv4.SrcIP.String()
 	} else if p.decoded[1] == layers.LayerTypeIPv6 {
-		PacketID = p.ipv6.SrcIP.String()
+		PacketFileName = p.ipv6.SrcIP.String()
 	} else if p.decoded[0] == layers.LayerTypeEthernet {
-		PacketID = p.eth.SrcMAC.String()
+		PacketFileName = strings.Replace(p.eth.SrcMAC.String(), ":", "..", -1)
 	}
 
-	folderString := filepath.Join(LogPath, PacketID)
+	folderString := filepath.Join(LogPath, PacketFileName)
 
 	err := CreateFile(folderString)
 	if err != nil {
@@ -56,16 +58,25 @@ func (p *PacketHandler) RecordPacket(rule *ruleStructure.Rule) {
 }
 
 func (p *PacketHandler) AlertPacket(rule *ruleStructure.Rule) {
-	p.RecordPacket(rule)
-	RuleMailSetting.SetBody(rule.Msg)
-	err := RuleMailSetting.SendMail()
-	if err != nil {
-		fmt.Println(err.Error())
-	}
+	WriteContentPtr := p.parseMsgStringToString(rule)
+	go func() {
+		err := AppendWriteFile(Initialize.AlertPath, *WriteContentPtr)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+	}()
+	ReceivePacketCount++
 	fmt.Println("Alerting packet")
 }
 
 func (p *PacketHandler) SendPacket(rule *ruleStructure.Rule) {
+	p.AlertPacket(rule)
+	WriteContentPtr := p.parseMsgStringToString(rule)
+	RuleMailSetting.SetBody(*WriteContentPtr)
+	err := RuleMailSetting.SendMail()
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 	fmt.Println("Sending packet")
 }
 
