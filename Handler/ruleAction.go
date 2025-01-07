@@ -11,7 +11,7 @@ import (
 
 var ReceivePacketCount = 0
 
-var RuleMailSetting *MailSetting
+//var RuleMailSetting *MailSetting
 
 // Action标识符
 const (
@@ -22,12 +22,13 @@ const (
 	PacketDropAction
 )
 
-func (p *PacketHandler) PassPacket(rule *ruleStructure.Rule) {
+func (p *PacketHandler) PassPacket(rule *ruleStructure.Rule) error {
 	ReceivePacketCount++
 	fmt.Println(ReceivePacketCount)
+	return nil
 }
 
-func (p *PacketHandler) RecordPacket(rule *ruleStructure.Rule) {
+func (p *PacketHandler) RecordPacket(rule *ruleStructure.Rule) error {
 	PacketTopProtocol := p.decoded[len(p.decoded)-1].String() //顶端协议
 	var PacketFileName string
 
@@ -39,14 +40,15 @@ func (p *PacketHandler) RecordPacket(rule *ruleStructure.Rule) {
 		PacketFileName = strings.Replace(p.eth.SrcMAC.String(), ":", "..", -1)
 	}
 
-	folderString := filepath.Join(LogPath, PacketFileName)
+	folderString := filepath.Join(Initialize.LogPath, PacketFileName)
 
 	err := CreateFile(folderString)
 	if err != nil {
 		fmt.Println(err.Error())
+		return err
 	}
-	//fmt.Println(*p.parseMsgStringToString(rule))
-	WriteContentPtr := p.parseMsgStringToString(rule)
+	//fmt.Println(*p.parseMsgStringToValue(rule))
+	WriteContentPtr := p.parseMsgStringToValue(rule)
 	go func() {
 		err := AppendWriteFile(filepath.Join(folderString, PacketTopProtocol), *WriteContentPtr)
 		if err != nil {
@@ -55,31 +57,36 @@ func (p *PacketHandler) RecordPacket(rule *ruleStructure.Rule) {
 	}()
 	ReceivePacketCount++
 	fmt.Println("Recording packet")
+	return nil
 }
 
-func (p *PacketHandler) AlertPacket(rule *ruleStructure.Rule) {
-	WriteContentPtr := p.parseMsgStringToString(rule)
+func (p *PacketHandler) AlertPacket(rule *ruleStructure.Rule) error {
+	WriteContentPtr := p.parseMsgStringToValue(rule)
 	go func() {
-		err := AppendWriteFile(Initialize.AlertPath, *WriteContentPtr)
+		err := AppendWriteFile("", *WriteContentPtr)
 		if err != nil {
 			fmt.Println(err.Error())
 		}
 	}()
 	ReceivePacketCount++
 	fmt.Println("Alerting packet")
+	return nil
 }
 
-func (p *PacketHandler) SendPacket(rule *ruleStructure.Rule) {
+func (p *PacketHandler) SendPacket(rule *ruleStructure.Rule) error {
 	p.AlertPacket(rule)
-	WriteContentPtr := p.parseMsgStringToString(rule)
-	RuleMailSetting.SetBody(*WriteContentPtr)
-	err := RuleMailSetting.SendMail()
+	WriteContentPtr := p.parseMsgStringToValue(rule)
+	Initialize.Mail.SetBody(*WriteContentPtr)
+	err := Initialize.Mail.SendMail()
 	if err != nil {
 		fmt.Println(err.Error())
+		return err
 	}
 	fmt.Println("Sending packet")
+	return nil
 }
 
-func (p *PacketHandler) DropPacket(rule *ruleStructure.Rule) {
+func (p *PacketHandler) DropPacket(rule *ruleStructure.Rule) error {
 	fmt.Println("Dropping packet")
+	return nil
 }

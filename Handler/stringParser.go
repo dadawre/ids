@@ -8,7 +8,8 @@ import (
 	"strconv"
 )
 
-func (p *PacketHandler) parseMsgStringToString(rule *ruleStructure.Rule) *string {
+// 将字符串的字段值解析成对应类型的值
+func (p *PacketHandler) parseMsgStringToValue(rule *ruleStructure.Rule) *string {
 	result := make([]any, 0, 0)
 	var str string
 	for _, stringId := range rule.Strings {

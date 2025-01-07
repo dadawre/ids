@@ -39,12 +39,8 @@ func getAllNetworkDev() ([]NetworkDevice, error) {
 }
 
 func main() {
-	Initialize.ConfigInitialize()
-	Initialize.RulesInitialize()
-	Initialize.VariableInitialize()
-	Initialize.TerminateParameterInitialize()
+	Initialize.MainInitialize()
 	Control.RulerInputListen()
-
 	go func() { //程序状态监控
 		log.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
@@ -69,10 +65,6 @@ func main() {
 	}
 	defer inactiveHandle.CleanUp()
 
-	go func() { //硬件利用率刷新
-		OSController.GetOSStates(time.Duration(Initialize.HardwareDataRefreshFrequency) * time.Millisecond) //多少ms刷新一次硬件数据
-	}()
-
 	if err := inactiveHandle.SetTimeout(time.Second); err != nil {
 		log.Fatalf("Error setting timeout: %v", err)
 	}
@@ -87,15 +79,19 @@ func main() {
 	}
 	defer handle.Close()
 
+	go func() { //硬件利用率刷新
+		OSController.GetOSStates(time.Duration(Initialize.HardwareDataRefreshFrequency) * time.Millisecond) //多少ms刷新一次硬件数据
+	}()
+
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 
 	Channels := make([]chan *gopacket.Packet, Initialize.MaxCoroutine)
-	Initialize.PacketHandlerArr = make([]*Handler.PacketHandler, Initialize.MaxCoroutine)
+	Handler.PacketHandlerArr = make([]*Handler.PacketHandler, Initialize.MaxCoroutine)
 
 	for i := 0; i < Initialize.MaxCoroutine; i++ {
 		Channels[i] = make(chan *gopacket.Packet)
-		Initialize.PacketHandlerArr[i] = Handler.NewHandlerPacket(Channels[i], "coroutine"+strconv.Itoa(i), Initialize.ListRules)
-		Initialize.PacketHandlerArr[i].StartHandle()
+		Handler.PacketHandlerArr[i] = Handler.NewHandlerPacket(Channels[i], "coroutine"+strconv.Itoa(i), Initialize.ListRules)
+		Handler.PacketHandlerArr[i].StartHandle()
 	}
 
 	for packet := range packetSource.Packets() {

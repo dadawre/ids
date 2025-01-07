@@ -2,15 +2,83 @@ package Initialize
 
 import (
 	"fmt"
-	"graduationDesign/Handler"
 	"graduationDesign/Parser/ParserConfig"
 	"graduationDesign/Parser/ParserRuler"
 	"graduationDesign/structure/ruleStructure"
 	"log"
 	"os"
+	"os/exec"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 )
+
+// MainInitialize ids初始化总函数
+func MainInitialize() {
+	ConfigInitialize()
+	RulesInitialize()
+	VariableInitialize()
+	TerminateParameterInitialize()
+	BashScriptInitialize()
+	EndListenInitialize()
+}
+
+// ConductionConduction 程序结束时执行的函数
+func ConductionConduction() {
+	//保存ip_ban集合的ipset配置
+	cmd := exec.Command("/bin/bash", SaveBanIpShPath)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+	// 打印脚本的输出
+	fmt.Println("ip_ban save output:", string(output))
+
+	//保存iptables集合的配置
+	cmd = exec.Command("/bin/bash", SaveIptablesShPath)
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+	// 打印脚本的输出
+	fmt.Println("iptables output:", string(output))
+}
+
+// EndListenInitialize 程序结束监听函数初始化
+func EndListenInitialize() {
+	// 创建一个用于接收信号的 channel
+	signalChan := make(chan os.Signal, 1)
+
+	// 捕获 SIGINT 和 SIGTERM 信号
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// 启动一个 goroutine 监听信号
+	go func() {
+		// 阻塞直到接收到信号
+		sigReceived := <-signalChan
+		fmt.Printf("接收到信号: %s，开始执行退出清理...\n", sigReceived)
+
+		// 在程序关闭前执行清理函数
+		ConductionConduction()
+
+		// 程序退出
+		os.Exit(0)
+	}()
+
+}
+
+func BashScriptInitialize() {
+	cmd := exec.Command("/bin/bash", InitBanIpShPath)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+
+	// 打印脚本的输出
+	fmt.Println("Output:", string(output))
+
+}
 
 func ConfigInitialize() {
 	ConfigLexer = ParserConfig.NewConfigLexer(ConfigPath) //词法分析器
@@ -68,19 +136,19 @@ func VariableInitialize() {
 	}
 	fmt.Println(MaxCoroutine)
 	MailInitialize()
-	Handler.LogPath = LogPath
+	//Handler.LogPath = LogPath
 }
 
 func MailInitialize() {
-	mail = mail.SetSmtpHost(SmtpHost).
+	Mail = Mail.SetSmtpHost(SmtpHost).
 		SetSmtpPort(strconv.Itoa(SmtpPort)).
 		SetToEmail(ToEmail).
 		SetAuthEmail(AuthEmail).
 		SetAuthPassword(AuthPassword).
 		SetSubject("Subject: 测试邮件\n").
 		SetBody("这是通过Go语言发送的测试邮件。")
-	Handler.RuleMailSetting = mail
-	fmt.Println(mail)
+	//Handler.RuleMailSetting = Mail
+	fmt.Println(Mail)
 }
 
 func TerminateParameterInitialize() {

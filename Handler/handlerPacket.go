@@ -9,29 +9,30 @@ import (
 	"graduationDesign/structure/ruleStructure"
 )
 
-var LogPath string
+var PacketHandlerArr []*PacketHandler //数据包解析结构体数组
+//var LogPath string
 
 // PacketHandler 进行数据包处理结构体，功能包括提取数据包各层协议并与规则进行匹配
 type PacketHandler struct {
-	handlerName                     string                                  //数据处理器名称
-	isStart                         bool                                    //是否启动
-	packetChan                      chan *gopacket.Packet                   //接收数据的管程
-	layersContainer                 gopacket.DecodingLayerContainer         //数据栈解析容器
-	eth                             *layers.Ethernet                        //以太网结构体
-	arp                             *layers.ARP                             //ARP结构体
-	ipv4                            *layers.IPv4                            //IPV4结构体
-	ipv6                            *layers.IPv6                            //IPV6结构体
-	icmpv4                          *layers.ICMPv4                          //ICMPv4结构体
-	icmpv6                          *layers.ICMPv6                          //ICMPv6结构体
-	tcp                             *layers.TCP                             //TCP结构体
-	udp                             *layers.UDP                             //UDP结构体
-	dns                             *layers.DNS                             //DNS结构体
-	decoder                         gopacket.DecodingLayerFunc              //数据栈解析函数
-	decoded                         []gopacket.LayerType                    //数据栈各层使用协议
-	ruleLinkedList                  *ruleStructure.RuleLinkedList           //规则头指针
-	mapLayerTypeToProtocolStructure map[gopacket.LayerType]interface{}      //协议标识符到协议结构体映射
-	ruleBools                       []bool                                  //规则匹配bool
-	packetActionMap                 map[int8]func(rule *ruleStructure.Rule) // Action标识符到Action函数的映射
+	handlerName                     string                                        //数据处理器名称
+	isStart                         bool                                          //是否启动
+	packetChan                      chan *gopacket.Packet                         //接收数据的管程
+	layersContainer                 gopacket.DecodingLayerContainer               //数据栈解析容器
+	eth                             *layers.Ethernet                              //以太网结构体
+	arp                             *layers.ARP                                   //ARP结构体
+	ipv4                            *layers.IPv4                                  //IPV4结构体
+	ipv6                            *layers.IPv6                                  //IPV6结构体
+	icmpv4                          *layers.ICMPv4                                //ICMPv4结构体
+	icmpv6                          *layers.ICMPv6                                //ICMPv6结构体
+	tcp                             *layers.TCP                                   //TCP结构体
+	udp                             *layers.UDP                                   //UDP结构体
+	dns                             *layers.DNS                                   //DNS结构体
+	decoder                         gopacket.DecodingLayerFunc                    //数据栈解析函数
+	decoded                         []gopacket.LayerType                          //数据栈各层使用协议
+	ruleLinkedList                  *ruleStructure.RuleLinkedList                 //规则头指针
+	mapLayerTypeToProtocolStructure map[gopacket.LayerType]interface{}            //协议标识符到协议结构体映射
+	ruleBools                       []bool                                        //规则匹配bool
+	packetActionMap                 map[int8]func(rule *ruleStructure.Rule) error // Action标识符到Action函数的映射
 }
 
 // initialContainer 初始化协议层容器和解码器
@@ -71,12 +72,12 @@ func (p *PacketHandler) initialContainer() {
 	}
 	p.ruleBools = make([]bool, 20)
 
-	p.packetActionMap = map[int8]func(rule *ruleStructure.Rule){
+	p.packetActionMap = map[int8]func(rule *ruleStructure.Rule) error{
 		PacketPassAction:   p.PassPacket,
 		PacketRecordAction: p.RecordPacket,
 		PacketAlertAction:  p.AlertPacket,
 		PacketSendAction:   p.SendPacket,
-		PacketDropAction:   p.DropPacket,
+		PacketDropAction:   p.DropIPv4Packets,
 	}
 }
 
@@ -93,7 +94,7 @@ func (p *PacketHandler) PayloadMatch() {
 					}
 					p.ruleBools[index] = matchFunc(protocol, p.mapLayerTypeToProtocolStructure[protocol.NameId])
 				} else if protocol.NameId == 10000 {
-					fmt.Println("OS执行", p.mapLayerTypeToProtocolStructure[10000])
+					//fmt.Println("OS执行", p.mapLayerTypeToProtocolStructure[10000])
 					OSMatchFunc, exists := RuleMatch.MapLayerTypeToMatchFunc[10000]
 					if !exists {
 						fmt.Printf("No match function for OS: %v\n", protocol.NameId)
