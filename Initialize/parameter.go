@@ -37,6 +37,10 @@ var ( //通用变量
 
 		"ban_ip_save_path":   &BanIpConfigPath,    //ban_ip配置文件路径
 		"iptables_save_path": &IptablesConfigPath, //iptables配置文件路径
+
+		"ids_mode": &IdsMode,
+		"ids_name": &IdsName,
+		"ids_id":   &IdsID,
 	}
 )
 
@@ -61,4 +65,8 @@ var ( //配置键值对，默认值
 
 	BanIpConfigPath    string
 	IptablesConfigPath string
+
+	IdsMode = 1
+	IdsName = "node1"
+	IdsID   = 1
 )

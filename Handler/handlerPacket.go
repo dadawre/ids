@@ -10,14 +10,22 @@ import (
 )
 
 var PacketHandlerArr []*PacketHandler //数据包解析结构体数组
-//var LogPath string
 
 // PacketHandler 进行数据包处理结构体，功能包括提取数据包各层协议并与规则进行匹配
 type PacketHandler struct {
-	handlerName                     string                                        //数据处理器名称
-	isStart                         bool                                          //是否启动
-	packetChan                      chan *gopacket.Packet                         //接收数据的管程
-	layersContainer                 gopacket.DecodingLayerContainer               //数据栈解析容器
+	handlerName string //数据处理器名称
+	isStart     bool   //是否启动
+
+	packetChan chan *gopacket.Packet //接收数据的管程
+	//parser          *gopacket.DecodingLayerParser
+	layersContainer gopacket.DecodingLayerContainer //数据栈解析容器
+	decoder         gopacket.DecodingLayerFunc      //数据栈解析函数
+	decoded         []gopacket.LayerType            //数据栈各层使用协议
+
+	ruleLinkedList                  *ruleStructure.RuleLinkedList                 //规则头指针
+	mapLayerTypeToProtocolStructure map[gopacket.LayerType]interface{}            //协议标识符到协议结构体映射
+	ruleBools                       []bool                                        //规则匹配bool
+	packetActionMap                 map[int8]func(rule *ruleStructure.Rule) error // Action标识符到Action函数的映射
 	eth                             *layers.Ethernet                              //以太网结构体
 	arp                             *layers.ARP                                   //ARP结构体
 	ipv4                            *layers.IPv4                                  //IPV4结构体
@@ -27,16 +35,12 @@ type PacketHandler struct {
 	tcp                             *layers.TCP                                   //TCP结构体
 	udp                             *layers.UDP                                   //UDP结构体
 	dns                             *layers.DNS                                   //DNS结构体
-	decoder                         gopacket.DecodingLayerFunc                    //数据栈解析函数
-	decoded                         []gopacket.LayerType                          //数据栈各层使用协议
-	ruleLinkedList                  *ruleStructure.RuleLinkedList                 //规则头指针
-	mapLayerTypeToProtocolStructure map[gopacket.LayerType]interface{}            //协议标识符到协议结构体映射
-	ruleBools                       []bool                                        //规则匹配bool
-	packetActionMap                 map[int8]func(rule *ruleStructure.Rule) error // Action标识符到Action函数的映射
+	payload                         *gopacket.Payload                             //载荷结构体
 }
 
 // initialContainer 初始化协议层容器和解码器
 func (p *PacketHandler) initialContainer() {
+	// 创建协议层
 	p.eth = &layers.Ethernet{}
 	p.arp = &layers.ARP{}
 	p.ipv4 = &layers.IPv4{}
@@ -46,19 +50,26 @@ func (p *PacketHandler) initialContainer() {
 	p.tcp = &layers.TCP{}
 	p.udp = &layers.UDP{}
 	p.dns = &layers.DNS{}
+	p.payload = &gopacket.Payload{}
 
-	p.layersContainer = gopacket.DecodingLayerContainer(gopacket.DecodingLayerMap{})
-	p.layersContainer = p.layersContainer.Put(p.eth)
-	p.layersContainer = p.layersContainer.Put(p.arp)
-	p.layersContainer = p.layersContainer.Put(p.ipv4)
-	p.layersContainer = p.layersContainer.Put(p.ipv6)
-	p.layersContainer = p.layersContainer.Put(p.icmpv4)
-	p.layersContainer = p.layersContainer.Put(p.icmpv6)
-	p.layersContainer = p.layersContainer.Put(p.udp)
-	p.layersContainer = p.layersContainer.Put(p.tcp)
-	p.layersContainer = p.layersContainer.Put(p.dns)
+	// 创建一个新的 DecodingLayerMap 实例
+	p.layersContainer = gopacket.DecodingLayerMap{}
 
+	// 将各个层次加入到容器中，链式调用方式
+	p.layersContainer = p.layersContainer.Put(p.eth).
+		Put(p.arp).
+		Put(p.ipv4).
+		Put(p.ipv6).
+		Put(p.icmpv4).
+		Put(p.icmpv6).
+		Put(p.udp).
+		Put(p.tcp).
+		Put(p.dns)
+
+	// 初始化 decoder
 	p.decoder = p.layersContainer.LayersDecoder(layers.LayerTypeEthernet, gopacket.NilDecodeFeedback)
+
+	// 初始化解码的协议层类型切片
 	p.decoded = make([]gopacket.LayerType, 0, 20)
 
 	p.mapLayerTypeToProtocolStructure = map[gopacket.LayerType]interface{}{
@@ -68,8 +79,12 @@ func (p *PacketHandler) initialContainer() {
 		layers.LayerTypeIPv6:     p.ipv6,
 		layers.LayerTypeTCP:      p.tcp,
 		layers.LayerTypeUDP:      p.udp,
+		layers.LayerTypeICMPv4:   p.icmpv4,
+		layers.LayerTypeICMPv6:   p.icmpv6,
+		layers.LayerTypeDNS:      p.dns,
 		10000:                    OSController.State,
 	}
+
 	p.ruleBools = make([]bool, 20)
 
 	p.packetActionMap = map[int8]func(rule *ruleStructure.Rule) error{

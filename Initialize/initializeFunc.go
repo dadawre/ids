@@ -14,7 +14,7 @@ import (
 	"syscall"
 )
 
-// MainInitialize ids初始化总函数
+// MainInitialize 程序初始化总函数
 func MainInitialize() {
 	ConfigInitialize()
 	RulesInitialize()

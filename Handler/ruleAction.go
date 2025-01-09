@@ -7,11 +7,10 @@ import (
 	"graduationDesign/structure/ruleStructure"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 var ReceivePacketCount = 0
-
-//var RuleMailSetting *MailSetting
 
 // Action标识符
 const (
@@ -24,11 +23,13 @@ const (
 
 func (p *PacketHandler) PassPacket(rule *ruleStructure.Rule) error {
 	ReceivePacketCount++
-	fmt.Println(ReceivePacketCount)
+	fmt.Println("当前接收数据包个数:", ReceivePacketCount)
 	return nil
 }
 
 func (p *PacketHandler) RecordPacket(rule *ruleStructure.Rule) error {
+	ReceivePacketCount++
+
 	PacketTopProtocol := p.decoded[len(p.decoded)-1].String() //顶端协议
 	var PacketFileName string
 
@@ -45,48 +46,64 @@ func (p *PacketHandler) RecordPacket(rule *ruleStructure.Rule) error {
 	err := CreateFile(folderString)
 	if err != nil {
 		fmt.Println(err.Error())
-		return err
 	}
 	//fmt.Println(*p.parseMsgStringToValue(rule))
 	WriteContentPtr := p.parseMsgStringToValue(rule)
 	go func() {
-		err := AppendWriteFile(filepath.Join(folderString, PacketTopProtocol), *WriteContentPtr)
+		err := AppendWriteFile(filepath.Join(folderString, PacketTopProtocol),
+			fmt.Sprintf("\n时间: %s", time.Now().Format(time.RFC3339))+*WriteContentPtr)
 		if err != nil {
 			fmt.Println(err.Error())
 		}
+		ReceivePacketCount++
+		fmt.Println("Recording packet")
 	}()
-	ReceivePacketCount++
-	fmt.Println("Recording packet")
+
 	return nil
 }
 
 func (p *PacketHandler) AlertPacket(rule *ruleStructure.Rule) error {
+	ReceivePacketCount++
+
 	WriteContentPtr := p.parseMsgStringToValue(rule)
+
 	go func() {
-		err := AppendWriteFile("", *WriteContentPtr)
+		err := AppendWriteFile(Initialize.AlertPath,
+			fmt.Sprintf("\n时间: %s\n", time.Now().Format(time.RFC3339))+*WriteContentPtr)
 		if err != nil {
 			fmt.Println(err.Error())
 		}
+		ReceivePacketCount++
+		fmt.Println("Alerting packet")
 	}()
-	ReceivePacketCount++
-	fmt.Println("Alerting packet")
 	return nil
 }
 
 func (p *PacketHandler) SendPacket(rule *ruleStructure.Rule) error {
-	p.AlertPacket(rule)
-	WriteContentPtr := p.parseMsgStringToValue(rule)
-	Initialize.Mail.SetBody(*WriteContentPtr)
-	err := Initialize.Mail.SendMail()
+	ReceivePacketCount++
+
+	err := p.AlertPacket(rule)
 	if err != nil {
-		fmt.Println(err.Error())
 		return err
 	}
-	fmt.Println("Sending packet")
+
+	WriteContentPtr := p.parseMsgStringToValue(rule)
+
+	go func() {
+		Initialize.Mail.SetSubject(fmt.Sprintf("ids id:%d, ids name:%s", Initialize.IdsID, Initialize.IdsName))
+		Initialize.Mail.SetBody(*WriteContentPtr)
+		err = Initialize.Mail.SendMail()
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		fmt.Println("Sending packet")
+	}()
+
 	return nil
 }
 
 func (p *PacketHandler) DropPacket(rule *ruleStructure.Rule) error {
+	ReceivePacketCount++
 	fmt.Println("Dropping packet")
 	return nil
 }

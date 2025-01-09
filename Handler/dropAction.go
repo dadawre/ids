@@ -41,6 +41,10 @@ func DropMacPackets(srcMAC, dstMAC, length, packetType string) error {
 
 // DropIPv4Packets 封IP
 func (p *PacketHandler) DropIPv4Packets(rule *ruleStructure.Rule) error {
+	err := p.AlertPacket(rule)
+	if err != nil {
+		return err
+	}
 	// 通过 exec.Command 执行 Shell 脚本,向ip_ban集合中插入封禁IP
 	cmd := exec.Command("/bin/bash", Initialize.AddIpToBanShPath, p.ipv4.SrcIP.String())
 	output, err := cmd.CombinedOutput()
