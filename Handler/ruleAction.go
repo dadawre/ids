@@ -51,7 +51,7 @@ func (p *PacketHandler) RecordPacket(rule *ruleStructure.Rule) error {
 	WriteContentPtr := p.parseMsgStringToValue(rule)
 	go func() {
 		err := AppendWriteFile(filepath.Join(folderString, PacketTopProtocol),
-			fmt.Sprintf("\n时间: %s", time.Now().Format(time.RFC3339))+*WriteContentPtr)
+			fmt.Sprintf("\n时间: %s\n", time.Now().Format(time.RFC3339))+*WriteContentPtr)
 		if err != nil {
 			fmt.Println(err.Error())
 		}
