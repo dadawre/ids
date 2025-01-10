@@ -16,11 +16,11 @@ type PacketHandler struct {
 	handlerName string //数据处理器名称
 	isStart     bool   //是否启动
 
-	packetChan chan *gopacket.Packet //接收数据的管程
-	//parser          *gopacket.DecodingLayerParser
-	layersContainer gopacket.DecodingLayerContainer //数据栈解析容器
-	decoder         gopacket.DecodingLayerFunc      //数据栈解析函数
-	decoded         []gopacket.LayerType            //数据栈各层使用协议
+	packetChan chan *gopacket.Packet         //接收数据的管程
+	parser     *gopacket.DecodingLayerParser // 数据栈解析器
+	//layersContainer gopacket.DecodingLayerContainer //数据栈解析容器
+	//decoder         gopacket.DecodingLayerFunc      //数据栈解析函数
+	decoded []gopacket.LayerType //数据栈各层使用协议
 
 	ruleLinkedList                  *ruleStructure.RuleLinkedList                 //规则头指针
 	mapLayerTypeToProtocolStructure map[gopacket.LayerType]interface{}            //协议标识符到协议结构体映射
@@ -38,6 +38,20 @@ type PacketHandler struct {
 	payload                         *gopacket.Payload                             //载荷结构体
 }
 
+// HandlePacket 一个协程函数负责接收数据包并进行解包
+func (p *PacketHandler) HandlePacket() {
+	for packet := range p.packetChan {
+		p.decoded = p.decoded[:0] // 重置解析结果
+		err := p.parser.DecodeLayers((*packet).Data(), &p.decoded)
+		fmt.Println(p.decoded)
+		if err != nil {
+			fmt.Println("解析数据包错误:", err)
+			//continue
+		}
+		p.PayloadMatch()
+	}
+}
+
 // initialContainer 初始化协议层容器和解码器
 func (p *PacketHandler) initialContainer() {
 	// 创建协议层
@@ -53,24 +67,29 @@ func (p *PacketHandler) initialContainer() {
 	p.payload = &gopacket.Payload{}
 
 	// 创建一个新的 DecodingLayerMap 实例
-	p.layersContainer = gopacket.DecodingLayerMap{}
+	//p.layersContainer = gopacket.DecodingLayerMap{}
 
-	// 将各个层次加入到容器中，链式调用方式
-	p.layersContainer = p.layersContainer.Put(p.eth).
-		Put(p.arp).
-		Put(p.ipv4).
-		Put(p.ipv6).
-		Put(p.icmpv4).
-		Put(p.icmpv6).
-		Put(p.udp).
-		Put(p.tcp).
-		Put(p.dns)
+	p.parser = gopacket.NewDecodingLayerParser(
+		layers.LayerTypeEthernet,
+		p.eth, p.arp, p.ipv4, p.ipv6, p.icmpv4, p.icmpv6, p.tcp, p.udp, p.dns, p.payload)
+
+	//// 将各个层次加入到容器中，链式调用方式
+	//p.layersContainer = p.layersContainer.
+	//	Put(p.eth).
+	//	Put(p.arp).
+	//	Put(p.ipv4).
+	//	Put(p.ipv6).
+	//	Put(p.icmpv4).
+	//	Put(p.icmpv6).
+	//	Put(p.udp).
+	//	Put(p.tcp).
+	//	Put(p.dns)
+
+	//// 初始化解码的协议层类型切片
+	//p.decoded = make([]gopacket.LayerType, 0, 20)
 
 	// 初始化 decoder
-	p.decoder = p.layersContainer.LayersDecoder(layers.LayerTypeEthernet, gopacket.NilDecodeFeedback)
-
-	// 初始化解码的协议层类型切片
-	p.decoded = make([]gopacket.LayerType, 0, 20)
+	//p.decoder = p.layersContainer.LayersDecoder(layers.LayerTypeEthernet, gopacket.NilDecodeFeedback)
 
 	p.mapLayerTypeToProtocolStructure = map[gopacket.LayerType]interface{}{
 		layers.LayerTypeEthernet: p.eth,
@@ -145,20 +164,6 @@ func (p *PacketHandler) PayloadMatch() {
 		}
 	}
 	p.PassPacket(nil)
-}
-
-// HandlePacket 一个协程函数负责接收数据包并进行解包
-func (p *PacketHandler) HandlePacket() {
-	for packet := range p.packetChan {
-		_, err := p.decoder((*packet).Data(), &p.decoded)
-		if err != nil {
-			fmt.Printf("Error decoding packet: %v\n", err)
-			continue
-		}
-
-		fmt.Println(p.decoded)
-		p.PayloadMatch()
-	}
 }
 
 // StartHandle 开启数据包处理功能

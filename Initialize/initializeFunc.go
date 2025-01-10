@@ -14,7 +14,7 @@ import (
 	"syscall"
 )
 
-// MainInitialize 程序初始化总函数
+// MainInitialize ids初始化总函数
 func MainInitialize() {
 	ConfigInitialize()
 	RulesInitialize()
@@ -27,7 +27,7 @@ func MainInitialize() {
 // ConductionConduction 程序结束时执行的函数
 func ConductionConduction() {
 	//保存ip_ban集合的ipset配置
-	cmd := exec.Command("/bin/bash", SaveBanIpShPath)
+	cmd := exec.Command("/bin/bash", SaveBanIpShPath,BanIpConfigPath)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -36,7 +36,7 @@ func ConductionConduction() {
 	fmt.Println("ip_ban save output:", string(output))
 
 	//保存iptables集合的配置
-	cmd = exec.Command("/bin/bash", SaveIptablesShPath)
+	cmd = exec.Command("/bin/bash", SaveIptablesShPath,IptablesConfigPath)
 	output, err = cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("Error:", err)
