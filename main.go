@@ -1,10 +1,11 @@
 package main
 
 import (
-	"graduationDesign/Control"
-	"graduationDesign/Initialize"
-	"graduationDesign/Mode"
-	"graduationDesign/OSController"
+	"graduationDesign/back_end/Control"
+	"graduationDesign/back_end/Initialize"
+	"graduationDesign/back_end/Mode"
+	"graduationDesign/back_end/Network"
+	"graduationDesign/back_end/OSController"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
@@ -14,6 +15,11 @@ import (
 func main() {
 	Initialize.MainInitialize()
 	Control.RulerInputListen()
+
+	go func() {
+		Network.InitializeNetwork()
+	}()
+
 	go func() { //程序状态监控
 		log.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
