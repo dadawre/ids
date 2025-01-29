@@ -4,7 +4,7 @@ import { Button, Input, Modal, Table, Form, Popconfirm, Space } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import Highlighter from 'react-highlight-words';
 
-const BanIPTable = () => {
+export default function BanIPTable(){
     const [data, setData] = useState([]);
     const [total, setTotal] = useState(0); // 总数据量
     const [searchText, setSearchText] = useState('');
@@ -99,23 +99,31 @@ const BanIPTable = () => {
     // 表格列配置
     const columns = [
         {
-            title: 'Ban IP',
+            title: '封禁IP',
             dataIndex: 'banIP',
             key: 'banIP',
-            width: '30%',
+            width: '10%',
             ...getColumnSearchProps('banIP'),
         },
         {
-            title: 'Ban Rule ID',
+            title: '触发规则ID',
             dataIndex: 'banRuleID',
             key: 'banRuleID',
-            width: '20%',
+            width: '10%',
             ...getColumnSearchProps('banRuleID'),
+        },
+        {
+            title: 'UnbanTime',
+            dataIndex: 'unbanTime',
+            key : 'unbanTime',
+            ...getColumnSearchProps('unbanTime'),
         },
         {
             title: 'Describe',
             dataIndex: 'describe',
             key: 'describe',
+            width: '40%',
+            ...getColumnSearchProps('describe'),
         },
         {
             title: 'Action',
@@ -151,12 +159,23 @@ const BanIPTable = () => {
         const newValues = {
             ...values,
             banRuleID: parseInt(values.banRuleID, 10), // 转换为整数
+            unbanTime: parseInt(values.unbanTime, 10)
         };
 
         // 确保转换成功（如果不是有效的数字，默认设置为 0）
         if (isNaN(newValues.banRuleID)) {
             newValues.banRuleID = 0;
         }
+        // 确保转换成功（如果不是有效的数字，默认设置为 15）
+        if (isNaN(newValues.unbanTime)) {
+            newValues.unbanTime = 15;
+        }
+
+        // 将 banTime 转换为当前时间加指定分钟后的日期时间（ISO 格式）
+        const now = new Date();
+        now.setMinutes(now.getMinutes() + newValues.unbanTime);
+        now.setHours(now.getHours()+8)
+        newValues.unbanTime = now.toISOString();
 
         // 发送请求
         const response = await fetch('http://localhost:8080/AddBanIP', {
@@ -204,7 +223,7 @@ const BanIPTable = () => {
                 onChange={handleTableChange}
             />
             <Modal
-                title="Add New Ban IP"
+                title="添加封禁IP"
                 visible={openModal}
                 onCancel={handleCancel}
                 footer={null}
@@ -215,29 +234,29 @@ const BanIPTable = () => {
                     initialValues={{ banIP: '', banRuleID: '', describe: '' }}
                 >
                     <Form.Item
-                        label="Ban IP"
+                        label="封禁IP"
                         name="banIP"
                         rules={[{ required: true, message: 'Please input the IP to ban!' }]}
                     >
                         <Input />
                     </Form.Item>
                     <Form.Item
-                        label="Ban Rule ID"
-                        name="banRuleID"
-                        rules={[{ required: true, message: 'Please input the rule ID!' }]}
-                    >
-                        <Input />
-                    </Form.Item>
-                    <Form.Item
-                        label="Description"
+                        label="描述"
                         name="describe"
                         rules={[{ required: true, message: 'Please input the description!' }]}
                     >
                         <Input />
                     </Form.Item>
+                    <Form.Item
+                        label="解禁时间"
+                        name="unbanTime"
+                        rules={[{ required: true, message: 'Please input the BanTime!' }]}
+                    >
+                        <Input />
+                    </Form.Item>
                     <Form.Item>
                         <Button type="primary" htmlType="submit">
-                            Submit
+                            提交
                         </Button>
                     </Form.Item>
                 </Form>
@@ -246,4 +265,3 @@ const BanIPTable = () => {
     );
 };
 
-export default BanIPTable;
