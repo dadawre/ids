@@ -1,4 +1,4 @@
-package ruleStructure
+package Structure
 
 import (
 	"fmt"
@@ -27,6 +27,11 @@ type RuleNodeValue struct {
 	Msg           string
 	StringIDs     []int
 	NetworkValues RuleNodeStringValue
+	Option        *RuleOption
+}
+
+type RuleOption struct {
+	BanTime int
 }
 
 // RuleNodeStringValue 游览器显示规则结构体
@@ -128,6 +133,6 @@ func (list *RuleLinkedList) GetStringArray() []RuleNodeStringValue {
 			current = current.Next
 		}
 	}
-	fmt.Println(StringArray)
+	//fmt.Println(StringArray)
 	return StringArray
 }

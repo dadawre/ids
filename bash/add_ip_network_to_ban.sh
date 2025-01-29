@@ -6,27 +6,25 @@ if ! ipset list ban_ip_network &>/dev/null; then
     ipset create ban_ip_network hash:net
 fi
 
-# 提示用户输入 IP 地址段
-read -p "Enter the IP network to block (e.g., 192.168.1.0/24): " ip_network
-
-# 验证输入的 IP 地址段格式
-if [[ ! $ip_network =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+$ ]]; then
-    echo "Invalid IP network format. Exiting."
+# 检查是否提供了 IP 地址
+if [ -z "$1" ]; then
+    echo "用法: $0 <IP地址>"
     exit 1
 fi
 
-# 将 IP 地址段添加到 ban_ip_network 集合
-ipset add ban_ip_network "$ip_network" 2>/dev/null
-if [ $? -eq 0 ]; then
-    echo "Added $ip_network to ban_ip_network."
-else
-    echo "$ip_network is already in the ban_ip_network set or failed to add."
+IP="$1"
+unbanTimeOut="$2"
+# 检查 ban_ip 集合是否存在
+if ! ipset list ban_ip &>/dev/null; then
+    echo "ipset 集合 ban_ip 不存在，请先运行初始化脚本."
+    exit 1
 fi
 
-# 配置 iptables 使用 ban_ip_network 集合
-if ! iptables -C INPUT -m set --match-set ban_ip_network src -j DROP &>/dev/null; then
-    echo "Adding iptables rule for ban_ip_network..."
-    iptables -A INPUT -m set --match-set ban_ip_network src -j DROP
+# 插入 IP 到 ban_ip 集合
+if ipset test ban_ip "$IP" &>/dev/null; then
+    echo "IP $IP 已存在于 ban_ip 集合中."
 else
-    echo "iptables rule for ban_ip_network already exists."
+    echo "将 IP $IP 插入到 ban_ip 集合中..."
+    ipset add ban_ip "$IP" timeout "$unbanTimeOut"
+    echo "IP $IP 已成功插入."
 fi

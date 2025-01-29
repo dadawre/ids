@@ -4,7 +4,7 @@ import (
 	"fmt"
 	ParserConfig2 "graduationDesign/back_end/Parser/ParserConfig"
 	"graduationDesign/back_end/Parser/ParserRuler"
-	"graduationDesign/back_end/structure/ruleStructure"
+	"graduationDesign/back_end/Structure"
 	"os"
 	"strings"
 	"testing"
@@ -59,7 +59,7 @@ func TestLexical(t *testing.T) {
 	//	fmt.Println(index, "   ", token)
 	//}
 
-	result := ruleStructure.RuleLinkedList{}
+	result := Structure.RuleLinkedList{}
 	err = parser.GetAllRule(&result)
 	if err != nil {
 		return

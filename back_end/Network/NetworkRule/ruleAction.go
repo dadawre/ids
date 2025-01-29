@@ -2,14 +2,14 @@ package NetworkRule
 
 import (
 	"encoding/json"
-	"graduationDesign/back_end/Initialize"
-	"graduationDesign/back_end/structure/ruleStructure"
+	Structure2 "graduationDesign/back_end/Initialize/InitializeStructure"
+	"graduationDesign/back_end/Structure"
 	"net/http"
 	"strconv"
 	"strings"
 )
 
-func RuleStringInsert(rule ruleStructure.RuleNodeStringValue) error {
+func RuleStringInsert(rule Structure.RuleNodeStringValue) error {
 	ruleString := ""
 	ruleString += rule.ProtocolsString
 	ruleString += " priority " + strconv.Itoa(rule.Priority)
@@ -17,8 +17,8 @@ func RuleStringInsert(rule ruleStructure.RuleNodeStringValue) error {
 	ruleString += " " + rule.MsgString
 	ruleString += " " + strings.Join(rule.StringParameterStrings, " ")
 	//fmt.Println(ruleString)
-	Initialize.MainRulerParser.Refresh(ruleString)
-	err := Initialize.MainRulerParser.GetAllRule(Initialize.ListRules)
+	Structure2.MainRulerParser.Refresh(ruleString)
+	err := Structure2.MainRulerParser.GetAllRule(Structure2.ListRules)
 	if err != nil {
 		//log.Fatal(err)
 		return err
@@ -27,8 +27,8 @@ func RuleStringInsert(rule ruleStructure.RuleNodeStringValue) error {
 	return nil
 }
 
-func RuleStringChange(rule ruleStructure.RuleNodeStringValue) error {
-	err := Initialize.ListRules.Delete(rule.ID)
+func RuleStringChange(rule Structure.RuleNodeStringValue) error {
+	err := Structure2.ListRules.Delete(rule.ID)
 	if err != nil {
 		return err
 	}
@@ -40,7 +40,7 @@ func RuleStringChange(rule ruleStructure.RuleNodeStringValue) error {
 }
 
 func RuleAdd(w http.ResponseWriter, r *http.Request) {
-	var rule ruleStructure.RuleNodeStringValue
+	var rule Structure.RuleNodeStringValue
 	err := json.NewDecoder(r.Body).Decode(&rule)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -48,7 +48,7 @@ func RuleAdd(w http.ResponseWriter, r *http.Request) {
 	//fmt.Println(rule)
 	mu.Lock()
 	defer mu.Unlock()
-	Initialize.ArrayRuleStrings = append(Initialize.ArrayRuleStrings, rule)
+	Structure2.ArrayRuleStrings = append(Structure2.ArrayRuleStrings, rule)
 	err = RuleStringInsert(rule)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -66,10 +66,10 @@ func RuleDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	mu.Lock()
 	defer mu.Unlock()
-	for i, rule := range Initialize.ArrayRuleStrings {
+	for i, rule := range Structure2.ArrayRuleStrings {
 		if rule.ID == req.ID {
-			Initialize.ArrayRuleStrings = append(Initialize.ArrayRuleStrings[:i], Initialize.ArrayRuleStrings[i+1:]...)
-			err := Initialize.ListRules.Delete(req.ID)
+			Structure2.ArrayRuleStrings = append(Structure2.ArrayRuleStrings[:i], Structure2.ArrayRuleStrings[i+1:]...)
+			err := Structure2.ListRules.Delete(req.ID)
 			if err != nil {
 				w.WriteHeader(http.StatusBadRequest)
 			}
@@ -80,7 +80,7 @@ func RuleDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func RuleEdit(w http.ResponseWriter, r *http.Request) {
-	var updatedRule ruleStructure.RuleNodeStringValue
+	var updatedRule Structure.RuleNodeStringValue
 	err := json.NewDecoder(r.Body).Decode(&updatedRule)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -88,9 +88,9 @@ func RuleEdit(w http.ResponseWriter, r *http.Request) {
 	//fmt.Println(updatedRule)
 	mu.Lock()
 	defer mu.Unlock()
-	for i, rule := range Initialize.ArrayRuleStrings {
+	for i, rule := range Structure2.ArrayRuleStrings {
 		if rule.ID == updatedRule.ID {
-			Initialize.ArrayRuleStrings[i] = updatedRule
+			Structure2.ArrayRuleStrings[i] = updatedRule
 			//RuleStringInsert(updatedRule)
 			err := RuleStringChange(updatedRule)
 			if err != nil {

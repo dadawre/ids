@@ -1,4 +1,4 @@
-package Initialize
+package Structure
 
 import (
 	"fmt"

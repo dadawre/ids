@@ -1,4 +1,4 @@
-package Initialize
+package Structure
 
 // ActionDescribeTriggerLog 后端数据结构
 type ActionDescribeTriggerLog struct {

@@ -2,8 +2,8 @@ package NetworkRule
 
 import (
 	"encoding/json"
-	"graduationDesign/back_end/Initialize"
-	"graduationDesign/back_end/structure/ruleStructure"
+	Structure2 "graduationDesign/back_end/Initialize/InitializeStructure"
+	"graduationDesign/back_end/Structure"
 	"net/http"
 	"sort"
 	"strconv"
@@ -31,7 +31,7 @@ func RuleFetch(w http.ResponseWriter, r *http.Request) {
 
 	// 数据过滤
 	mu.Lock()
-	filteredData := Initialize.ArrayRuleStrings
+	filteredData := Structure2.ArrayRuleStrings
 	mu.Unlock()
 
 	// 数据排序
@@ -74,8 +74,8 @@ func RuleFetch(w http.ResponseWriter, r *http.Request) {
 
 	// 准备响应数据
 	response := struct {
-		Results []ruleStructure.RuleNodeStringValue `json:"results"`
-		Total   int                                 `json:"total"`
+		Results []Structure.RuleNodeStringValue `json:"results"`
+		Total   int                             `json:"total"`
 	}{
 		Results: paginatedData,
 		Total:   len(filteredData),

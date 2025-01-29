@@ -5,8 +5,8 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"graduationDesign/back_end/OSController"
-	RuleMatch2 "graduationDesign/back_end/RuleMatch"
-	"graduationDesign/back_end/structure/ruleStructure"
+	"graduationDesign/back_end/RuleMatch"
+	"graduationDesign/back_end/Structure"
 )
 
 var PacketHandlerArr []*PacketHandler //数据包解析结构体数组
@@ -22,20 +22,20 @@ type PacketHandler struct {
 	decoder         gopacket.DecodingLayerFunc      //数据栈解析函数
 	decoded         []gopacket.LayerType            //数据栈各层使用协议
 
-	ruleLinkedList                  *ruleStructure.RuleLinkedList                          //规则头指针
-	mapLayerTypeToProtocolStructure map[gopacket.LayerType]interface{}                     //协议标识符到协议结构体映射
-	ruleBools                       []bool                                                 //规则匹配bool
-	packetActionMap                 map[int8]func(rule *ruleStructure.RuleNodeValue) error // Action标识符到Action函数的映射
-	eth                             *layers.Ethernet                                       //以太网结构体
-	arp                             *layers.ARP                                            //ARP结构体
-	ipv4                            *layers.IPv4                                           //IPV4结构体
-	ipv6                            *layers.IPv6                                           //IPV6结构体
-	icmpv4                          *layers.ICMPv4                                         //ICMPv4结构体
-	icmpv6                          *layers.ICMPv6                                         //ICMPv6结构体
-	tcp                             *layers.TCP                                            //TCP结构体
-	udp                             *layers.UDP                                            //UDP结构体
-	dns                             *layers.DNS                                            //DNS结构体
-	payload                         *gopacket.Payload                                      //载荷结构体
+	ruleLinkedList                  *Structure.RuleLinkedList                          //规则头指针
+	mapLayerTypeToProtocolStructure map[gopacket.LayerType]interface{}                 //协议标识符到协议结构体映射
+	ruleBools                       []bool                                             //规则匹配bool
+	packetActionMap                 map[int8]func(rule *Structure.RuleNodeValue) error // Action标识符到Action函数的映射
+	eth                             *layers.Ethernet                                   //以太网结构体
+	arp                             *layers.ARP                                        //ARP结构体
+	ipv4                            *layers.IPv4                                       //IPV4结构体
+	ipv6                            *layers.IPv6                                       //IPV6结构体
+	icmpv4                          *layers.ICMPv4                                     //ICMPv4结构体
+	icmpv6                          *layers.ICMPv6                                     //ICMPv6结构体
+	tcp                             *layers.TCP                                        //TCP结构体
+	udp                             *layers.UDP                                        //UDP结构体
+	dns                             *layers.DNS                                        //DNS结构体
+	payload                         *gopacket.Payload                                  //载荷结构体
 }
 
 // initialContainer 初始化协议层容器和解码器
@@ -87,7 +87,7 @@ func (p *PacketHandler) initialContainer() {
 
 	p.ruleBools = make([]bool, 20)
 
-	p.packetActionMap = map[int8]func(rule *ruleStructure.RuleNodeValue) error{
+	p.packetActionMap = map[int8]func(rule *Structure.RuleNodeValue) error{
 		PacketPassAction:   p.PassPacket,
 		PacketRecordAction: p.RecordPacket,
 		PacketAlertAction:  p.AlertPacket,
@@ -102,7 +102,7 @@ func (p *PacketHandler) PayloadMatch() {
 		for index, protocol := range node.RuleValue.Protocols { //和规则的各个部分进行匹配
 			for _, decodedLayer := range p.decoded { //每层协议
 				if protocol.NameId == decodedLayer {
-					matchFunc, exists := RuleMatch2.MapLayerTypeToMatchFunc[protocol.NameId]
+					matchFunc, exists := RuleMatch.MapLayerTypeToMatchFunc[protocol.NameId]
 					if !exists {
 						fmt.Printf("No match function for protocol: %v\n", protocol.NameId)
 						continue
@@ -110,7 +110,7 @@ func (p *PacketHandler) PayloadMatch() {
 					p.ruleBools[index] = matchFunc(&protocol, p.mapLayerTypeToProtocolStructure[protocol.NameId])
 				} else if protocol.NameId == 10000 {
 					//fmt.Println("OS执行", p.mapLayerTypeToProtocolStructure[10000])
-					OSMatchFunc, exists := RuleMatch2.MapLayerTypeToMatchFunc[10000]
+					OSMatchFunc, exists := RuleMatch.MapLayerTypeToMatchFunc[10000]
 					if !exists {
 						fmt.Printf("No match function for OS: %v\n", protocol.NameId)
 						break
@@ -121,7 +121,7 @@ func (p *PacketHandler) PayloadMatch() {
 			}
 		}
 
-		result, err := RuleMatch2.EvaluateExpression(p.ruleBools, node.RuleValue.Operators)
+		result, err := RuleMatch.EvaluateExpression(p.ruleBools, node.RuleValue.Operators)
 		//if err != nil {
 		//	fmt.Printf("Error executing result: %v\n", err)
 		//	continue
@@ -172,7 +172,7 @@ func (p *PacketHandler) StartHandle() bool {
 }
 
 // NewHandlerPacket 创建一个新的数据包处理对象
-func NewHandlerPacket(packetChan chan *gopacket.Packet, handlerName string, ruleList *ruleStructure.RuleLinkedList) *PacketHandler {
+func NewHandlerPacket(packetChan chan *gopacket.Packet, handlerName string, ruleList *Structure.RuleLinkedList) *PacketHandler {
 	newHandlerPacket := &PacketHandler{
 		packetChan:     packetChan,
 		handlerName:    handlerName,

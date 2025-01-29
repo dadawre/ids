@@ -11,8 +11,11 @@ conf文件文件规则如下:
     参数配置规则:
     config
     {参数名 = 参数值}
-    max_coroutine = 1024
-    log_path = ./log
+    如:
+    config
+    {
+        max_coroutine = 1024
+        log_path = ./log
     }
 
 rules文件规则如下: 

@@ -2,7 +2,7 @@ package NetworkConfig
 
 import (
 	"encoding/json"
-	"graduationDesign/back_end/Initialize"
+	"graduationDesign/back_end/Initialize/InitializeStructure"
 	"net/http"
 	"sort"
 	"strconv"
@@ -25,7 +25,7 @@ func GetConfigData() *[]Config {
 func InitializeConfigData() {
 	if len(ConfigData) == 0 {
 		i := 0
-		for key, value := range Initialize.MapVariableNameToVariable {
+		for key, value := range InitializeStructure.MapVariableNameToVariable {
 			ConfigData = append(ConfigData, Config{Index: i, Key: key, Value: value})
 			i++
 		}

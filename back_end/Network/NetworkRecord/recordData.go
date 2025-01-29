@@ -3,17 +3,18 @@ package NetworkRecord
 import (
 	"encoding/json"
 	"fmt"
-	"graduationDesign/back_end/Initialize"
+	Structure2 "graduationDesign/back_end/Initialize/InitializeStructure"
+	"graduationDesign/back_end/Structure"
 	"net/http"
 	"strconv"
 	"strings"
 )
 
 // 处理前端传来的筛选条件
-func filterLogs(filter map[string]string) []Initialize.ActionDescribeTriggerLog {
+func filterLogs(filter map[string]string) []Structure.ActionDescribeTriggerLog {
 
-	var filteredLogs []Initialize.ActionDescribeTriggerLog
-	for _, log := range Initialize.ActionDescribeTriggerLogArray {
+	var filteredLogs []Structure.ActionDescribeTriggerLog
+	for _, log := range Structure2.ActionDescribeTriggerLogArray {
 		match := true
 		// 根据前端传来的字段进行过滤
 		if filter["DescribeMessage"] != "" && !strings.Contains(log.DescribeMessage, filter["DescribeMessage"]) {

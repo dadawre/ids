@@ -2,9 +2,11 @@ package Initialize
 
 import (
 	"fmt"
+	Structure2 "graduationDesign/back_end/Initialize/InitializeStructure"
+	"graduationDesign/back_end/Initialize/Parameter"
 	"graduationDesign/back_end/Parser/ParserConfig"
 	"graduationDesign/back_end/Parser/ParserRuler"
-	"graduationDesign/back_end/structure/ruleStructure"
+	"graduationDesign/back_end/Structure"
 	"log"
 	"os"
 	"os/exec"
@@ -22,12 +24,13 @@ func MainInitialize() {
 	TerminateParameterInitialize()
 	BashScriptInitialize()
 	EndListenInitialize()
+	MailInitialize()
 }
 
 // EndConduction 程序结束时执行的函数
 func EndConduction() {
 	//保存ip_ban集合的ipset配置
-	cmd := exec.Command("/bin/bash", SaveBanIpShPath, BanIpConfigSavePath)
+	cmd := exec.Command("/bin/bash", Parameter.SaveBanIpShPath, Parameter.BanIpConfigSavePath)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -36,7 +39,7 @@ func EndConduction() {
 	fmt.Println("ip_ban save output:", string(output))
 
 	//保存ip_ban集合的ipset配置
-	cmd = exec.Command("/bin/bash", SaveBanIpNetworkShPath, BanIpNetworkConfigSavePath)
+	cmd = exec.Command("/bin/bash", Parameter.SaveBanIpNetworkShPath, Parameter.BanIpNetworkConfigSavePath)
 	output, err = cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -45,7 +48,7 @@ func EndConduction() {
 	fmt.Println("ip_ban save output:", string(output))
 
 	//保存iptables集合的配置
-	cmd = exec.Command("/bin/bash", SaveIptablesShPath, IptablesConfigSavePath)
+	cmd = exec.Command("/bin/bash", Parameter.SaveIptablesShPath, Parameter.IptablesConfigSavePath)
 	output, err = cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -78,13 +81,13 @@ func EndListenInitialize() {
 }
 
 func BashScriptInitialize() {
-	cmd := exec.Command("/bin/bash", InitBanIpShPath)
+	cmd := exec.Command("/bin/bash", Parameter.InitBanIpShPath)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("Error:", err)
 	}
 
-	cmd = exec.Command("/bin/bash", InitBanIpNetWorkShPath)
+	cmd = exec.Command("/bin/bash", Parameter.InitBanIpNetWorkShPath)
 	output, err = cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -95,44 +98,34 @@ func BashScriptInitialize() {
 }
 
 func ConfigInitialize() {
-	ConfigLexer = ParserConfig.NewConfigLexer(ConfigPath) //词法分析器
-	confTokens := ConfigLexer.GetAllToken()               //Token标志数组
+	Structure2.ConfigLexer = ParserConfig.NewConfigLexer(Parameter.ConfigPath) //词法分析器
+	confTokens := Structure2.ConfigLexer.GetAllToken()                         //Token标志数组
 
-	ConfigParser = ParserConfig.NewConfigparser(&confTokens) //语法分析器
-	ConfigParser.ParseAllTokens()                            //语法解析
-	//解析所有语法
-	//fmt.Println("--------------------------------")
-	//fmt.Println(ConfigParser.ConfigTokens)
-	//fmt.Println("--------------------------------")
-	//fmt.Println(ConfigParser.ConfigVars)
-	//fmt.Println("--------------------------------")
-	//fmt.Println(ConfigParser.RulePaths)
-	//fmt.Println("--------------------------------")
-	//fmt.Println(ConfigParser.ConfigMapNameToValue)
-	//fmt.Println("--------------------------------")
+	Structure2.ConfigParser = ParserConfig.NewConfigparser(&confTokens) //语法分析器
+	Structure2.ConfigParser.ParseAllTokens()                            //语法解析
 
-	ConfigVars = ConfigParser.ConfigVars //变量
+	Structure2.ConfigVars = Structure2.ConfigParser.ConfigVars //变量
 
-	RulePaths = ConfigParser.RulePaths //规则路径变量
+	Structure2.RulePaths = Structure2.ConfigParser.RulePaths //规则路径变量
 
-	ConfigMapNameToValue = ConfigParser.ConfigMapNameToValue //配置变量键值对
+	Structure2.ConfigMapNameToValue = Structure2.ConfigParser.ConfigMapNameToValue //配置变量键值对
 
 }
 
 // RulesInitialize 初始化规则链表和数组
 func RulesInitialize() {
-	ListRules = &ruleStructure.RuleLinkedList{}
-	MainRulerParser = ParserRuler.NewRuleParser("", ConfigVars)
+	Structure2.ListRules = &Structure.RuleLinkedList{}
+	Structure2.MainRulerParser = ParserRuler.NewRuleParser("", Structure2.ConfigVars)
 
-	for _, path := range RulePaths {
+	for _, path := range Structure2.RulePaths {
 		content, err := os.ReadFile(*path)
 		if err != nil {
 			log.Fatalf("Error reading file: %v", err)
 		}
 
 		rule := string(content)
-		MainRulerParser.Refresh(rule)
-		err = MainRulerParser.GetAllRule(ListRules)
+		Structure2.MainRulerParser.Refresh(rule)
+		err = Structure2.MainRulerParser.GetAllRule(Structure2.ListRules)
 
 		if err != nil {
 			log.Printf("Error parsing rule: %v", err)
@@ -140,13 +133,13 @@ func RulesInitialize() {
 	}
 	//fmt.Println("---------------------------------")
 	//fmt.Println(ListRules.GetHead().RuleValue)
-	ArrayRuleStrings = ListRules.GetStringArray()
+	Structure2.ArrayRuleStrings = Structure2.ListRules.GetStringArray()
 	//fmt.Println(ArrayRuleStrings)
 }
 
 func VariableInitialize() {
-	for key, value := range ConfigMapNameToValue {
-		if varPtr, exists := MapVariableNameToVariable[key]; exists {
+	for key, value := range Structure2.ConfigMapNameToValue {
+		if varPtr, exists := Structure2.MapVariableNameToVariable[key]; exists {
 			num, err := strconv.Atoi(value)
 			if err == nil {
 				*(varPtr.(*int)) = num
@@ -155,21 +148,20 @@ func VariableInitialize() {
 			}
 		}
 	}
-	fmt.Println(MaxCoroutine)
-	MailInitialize()
+	//fmt.Println(MaxCoroutine)
 	//Handler.LogPath = LogPath
 }
 
 func MailInitialize() {
-	Mail = Mail.SetSmtpHost(SmtpHost).
-		SetSmtpPort(strconv.Itoa(SmtpPort)).
-		SetToEmail(ToEmail).
-		SetAuthEmail(AuthEmail).
-		SetAuthPassword(AuthPassword).
+	Structure2.Mail = Structure2.Mail.SetSmtpHost(Parameter.SmtpHost).
+		SetSmtpPort(strconv.Itoa(Parameter.SmtpPort)).
+		SetToEmail(Parameter.ToEmail).
+		SetAuthEmail(Parameter.AuthEmail).
+		SetAuthPassword(Parameter.AuthPassword).
 		SetSubject("Subject: 测试邮件\n").
 		SetBody("这是通过Go语言发送的测试邮件。")
 	//Handler.RuleMailSetting = Mail
-	fmt.Println(Mail)
+	//fmt.Println(Mail)
 }
 
 func TerminateParameterInitialize() {
@@ -183,7 +175,7 @@ func TerminateParameterInitialize() {
 		switch arg {
 		case "-l", "--log":
 			if i+1 < len(args) {
-				LogPath = args[i+1]
+				Parameter.LogPath = args[i+1]
 				i++
 			} else {
 				fmt.Println("Error: missing value for", arg)
@@ -191,7 +183,7 @@ func TerminateParameterInitialize() {
 			}
 		case "-c", "--config":
 			if i+1 < len(args) {
-				ConfigPath = args[i+1]
+				Parameter.ConfigPath = args[i+1]
 				i++
 			} else {
 				fmt.Println("Error: missing value for", arg)
@@ -199,9 +191,9 @@ func TerminateParameterInitialize() {
 			}
 		default:
 			if strings.HasPrefix(arg, "--log=") {
-				LogPath = strings.SplitN(arg, "=", 2)[1]
+				Parameter.LogPath = strings.SplitN(arg, "=", 2)[1]
 			} else if strings.HasPrefix(arg, "--config=") {
-				ConfigPath = strings.SplitN(arg, "=", 2)[1]
+				Parameter.ConfigPath = strings.SplitN(arg, "=", 2)[1]
 			} else {
 				fmt.Println("Unknown argument:", arg)
 				return
@@ -210,7 +202,7 @@ func TerminateParameterInitialize() {
 	}
 
 	// 输出解析后的参数
-	fmt.Printf("Log file path: %s\n", LogPath)
-	fmt.Printf("Config file path: %s\n", ConfigPath)
-	fmt.Println("硬件刷新频率", HardwareDataRefreshFrequency)
+	//fmt.Printf("Log file path: %s\n", LogPath)
+	//fmt.Printf("Config file path: %s\n", ConfigPath)
+	//fmt.Println("硬件刷新频率", HardwareDataRefreshFrequency)
 }

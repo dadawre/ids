@@ -3,7 +3,7 @@ package NetworkConfig
 import (
 	"encoding/json"
 	"fmt"
-	"graduationDesign/back_end/Initialize"
+	"graduationDesign/back_end/Initialize/InitializeStructure"
 	"io"
 	"net/http"
 )
@@ -41,8 +41,8 @@ func ChangeConfigHandler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println("可以修改:", req)
 	ConfigData[req.Index].Value = req.Value
-	Initialize.MapVariableNameToVariable[ConfigData[req.Index].Key] = req.Value
-	fmt.Println(Initialize.MapVariableNameToVariable[ConfigData[req.Index].Key])
+	InitializeStructure.MapVariableNameToVariable[ConfigData[req.Index].Key] = req.Value
+	fmt.Println(InitializeStructure.MapVariableNameToVariable[ConfigData[req.Index].Key])
 	// 模拟配置修改成功
 	res := ConfigResponse{Success: true, Message: "配置修改成功"}
 	w.Header().Set("Content-Type", "application/json")

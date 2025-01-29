@@ -4,12 +4,12 @@ import (
 	"encoding/hex"
 	"fmt"
 	"graduationDesign/back_end/Parser/ParserRuler"
-	"graduationDesign/back_end/structure/ruleStructure"
+	"graduationDesign/back_end/Structure"
 	"strconv"
 )
 
 // 将字符串的字段值解析成对应类型的值
-func (p *PacketHandler) parseMsgStringToValue(rule *ruleStructure.RuleNodeValue) *string {
+func (p *PacketHandler) parseMsgStringToValue(rule *Structure.RuleNodeValue) *string {
 	result := make([]any, 0, 0)
 	var str string
 	for _, stringId := range rule.StringIDs {
@@ -31,7 +31,8 @@ func (p *PacketHandler) parseMsgStringToValue(rule *ruleStructure.RuleNodeValue)
 		result = append(result, str)
 	}
 
-	resultStr := fmt.Sprintf(rule.Msg+"\n", result...)
+	resultStr := fmt.Sprintf(rule.Msg, result...)
+
 	//fmt.Println(rule.Msg)
 	//fmt.Println(result)
 	//fmt.Println(resultStr)

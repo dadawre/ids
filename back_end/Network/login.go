@@ -2,6 +2,7 @@ package Network
 
 import (
 	"encoding/json"
+	"graduationDesign/back_end/Initialize/Parameter"
 	"net/http"
 	"time"
 
@@ -37,7 +38,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Mock 验证（替换为实际验证逻辑）
-	if req.Username == "admin" && req.Password == "password" {
+	if req.Username == Parameter.Account && req.Password == Parameter.Password {
 		// 生成 JWT Token
 		expirationTime := time.Now().Add(8 * time.Hour) // 有效期 8 小时
 		claims := &Claims{

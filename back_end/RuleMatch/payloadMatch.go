@@ -5,12 +5,12 @@ import (
 	"github.com/google/gopacket/layers"
 	"graduationDesign/back_end/OSController"
 	"graduationDesign/back_end/Parser/ParserRuler"
-	"graduationDesign/back_end/structure/ruleStructure"
+	"graduationDesign/back_end/Structure"
 	"net"
 )
 
 // MapLayerTypeToMatchFunc LayerType映射到对应协议的匹配函数
-var MapLayerTypeToMatchFunc = map[gopacket.LayerType]func(protocol *ruleStructure.Protocol, payloadPtr interface{}) bool{
+var MapLayerTypeToMatchFunc = map[gopacket.LayerType]func(protocol *Structure.Protocol, payloadPtr interface{}) bool{
 	layers.LayerTypeEthernet: MACPayloadMatch,
 	layers.LayerTypeARP:      ARPPayLoadMatch,
 	layers.LayerTypeIPv4:     IPv4PayLoadMatch,
@@ -21,7 +21,7 @@ var MapLayerTypeToMatchFunc = map[gopacket.LayerType]func(protocol *ruleStructur
 }
 
 // MACPayloadMatch 对Mac协议进行匹配
-func MACPayloadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) bool {
+func MACPayloadMatch(protocol *Structure.Protocol, payloadPtr interface{}) bool {
 	mac := payloadPtr.(*layers.Ethernet)
 
 	for _, field := range protocol.Fields {
@@ -48,7 +48,7 @@ func MACPayloadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) b
 	return true
 }
 
-func ARPPayLoadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) bool {
+func ARPPayLoadMatch(protocol *Structure.Protocol, payloadPtr interface{}) bool {
 	arp := payloadPtr.(*layers.ARP)
 	for _, field := range protocol.Fields {
 		if field.NameId == ParserRuler.ARPTypeField {
@@ -94,7 +94,7 @@ func ARPPayLoadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) b
 	return true
 }
 
-func IPv6PayLoadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) bool {
+func IPv6PayLoadMatch(protocol *Structure.Protocol, payloadPtr interface{}) bool {
 	ipv6 := payloadPtr.(*layers.IPv6)
 	for _, field := range protocol.Fields {
 		if field.NameId == ParserRuler.IPv6DstField {
@@ -136,7 +136,7 @@ func IPv6PayLoadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) 
 	return true
 }
 
-func IPv4PayLoadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) bool {
+func IPv4PayLoadMatch(protocol *Structure.Protocol, payloadPtr interface{}) bool {
 	ipv4 := payloadPtr.(*layers.IPv4)
 	for _, field := range protocol.Fields {
 		if field.NameId == ParserRuler.IPv4SrcIPField {
@@ -194,7 +194,7 @@ func IPv4PayLoadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) 
 	return true
 }
 
-func TCPPayLoadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) bool {
+func TCPPayLoadMatch(protocol *Structure.Protocol, payloadPtr interface{}) bool {
 	tcp := payloadPtr.(*layers.TCP)
 	for _, field := range protocol.Fields {
 		if field.NameId == ParserRuler.TCPSrcPortField {
@@ -260,7 +260,7 @@ func TCPPayLoadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) b
 	return true
 }
 
-func UDPPayLoadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) bool {
+func UDPPayLoadMatch(protocol *Structure.Protocol, payloadPtr interface{}) bool {
 	udp := payloadPtr.(*layers.UDP)
 	for _, field := range protocol.Fields {
 		if field.NameId == ParserRuler.UDPSrcField {
@@ -286,7 +286,7 @@ func UDPPayLoadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) b
 	return true
 }
 
-func OSPayLoadMatch(protocol *ruleStructure.Protocol, payloadPtr interface{}) bool {
+func OSPayLoadMatch(protocol *Structure.Protocol, payloadPtr interface{}) bool {
 	os := payloadPtr.(*OSController.OSState)
 
 	for _, field := range protocol.Fields {

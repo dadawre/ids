@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"github.com/google/gopacket/layers"
 	"graduationDesign/back_end/Action"
-	"graduationDesign/back_end/Initialize"
-	"graduationDesign/back_end/structure/ruleStructure"
+	Structure2 "graduationDesign/back_end/Initialize/InitializeStructure"
+	"graduationDesign/back_end/Initialize/Parameter"
+	"graduationDesign/back_end/Structure"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -43,8 +44,8 @@ func (p *PacketHandler) GetSrcAndDstAddrString() (string, string) {
 }
 
 // 记录Action的日志
-func recordActionLog(srcAddr, dstAddr string, action int8, message string) Initialize.ActionDescribeTriggerLog {
-	return Initialize.ActionDescribeTriggerLog{
+func recordActionLog(srcAddr, dstAddr string, action int8, message string) Structure.ActionDescribeTriggerLog {
+	return Structure.ActionDescribeTriggerLog{
 		SrcAddr:         srcAddr,
 		DstAddr:         dstAddr,
 		ActionType:      action,
@@ -55,7 +56,7 @@ func (p *PacketHandler) defaultPass() {
 	incrementPacketCount()
 }
 
-func (p *PacketHandler) PassPacket(rule *ruleStructure.RuleNodeValue) error {
+func (p *PacketHandler) PassPacket(rule *Structure.RuleNodeValue) error {
 	// 写入日志内容
 	WriteContentPtr := p.parseMsgStringToValue(rule)
 	ContentString := fmt.Sprintf("时间: %s\n", time.Now().Format(time.RFC3339)) + *WriteContentPtr
@@ -63,12 +64,12 @@ func (p *PacketHandler) PassPacket(rule *ruleStructure.RuleNodeValue) error {
 	srcAddr, dstAddr := p.GetSrcAndDstAddrString()
 	ActionDescribeLog := recordActionLog(srcAddr, dstAddr, rule.Action, ContentString)
 
-	Initialize.ActionDescribeTriggerLogArray = append(Initialize.ActionDescribeTriggerLogArray, ActionDescribeLog)
+	Structure2.ActionDescribeTriggerLogArray = append(Structure2.ActionDescribeTriggerLogArray, ActionDescribeLog)
 	incrementPacketCount()
 	return nil
 }
 
-func (p *PacketHandler) RecordPacket(rule *ruleStructure.RuleNodeValue) error {
+func (p *PacketHandler) RecordPacket(rule *Structure.RuleNodeValue) error {
 	// 写入日志内容
 	WriteContentPtr := p.parseMsgStringToValue(rule)
 	ContentString := fmt.Sprintf("时间: %s\n", time.Now().Format(time.RFC3339)) + *WriteContentPtr
@@ -80,7 +81,7 @@ func (p *PacketHandler) RecordPacket(rule *ruleStructure.RuleNodeValue) error {
 	PacketTopProtocol := p.decoded[len(p.decoded)-1].String()
 
 	PacketFileName := ActionDescribeLog.SrcAddr
-	folderString := filepath.Join(Initialize.LogPath, PacketFileName)
+	folderString := filepath.Join(Parameter.LogPath, PacketFileName)
 
 	err := CreateFile(folderString)
 	if err != nil {
@@ -93,7 +94,7 @@ func (p *PacketHandler) RecordPacket(rule *ruleStructure.RuleNodeValue) error {
 			fmt.Println("Error appending to file:", err.Error())
 		}
 
-		Initialize.ActionDescribeTriggerLogArray = append(Initialize.ActionDescribeTriggerLogArray, ActionDescribeLog)
+		Structure2.ActionDescribeTriggerLogArray = append(Structure2.ActionDescribeTriggerLogArray, ActionDescribeLog)
 		incrementPacketCount()
 		fmt.Println("Recording packet")
 	}()
@@ -101,46 +102,46 @@ func (p *PacketHandler) RecordPacket(rule *ruleStructure.RuleNodeValue) error {
 	return nil
 }
 
-func (p *PacketHandler) AlertPacket(rule *ruleStructure.RuleNodeValue) error {
+func (p *PacketHandler) AlertPacket(rule *Structure.RuleNodeValue) error {
 	WriteContentPtr := p.parseMsgStringToValue(rule)
 	ContentString := fmt.Sprintf("时间: %s\n", time.Now().Format(time.RFC3339)) + *WriteContentPtr
 	srcAddr, dstAddr := p.GetSrcAndDstAddrString()
 	ActionDescribeLog := recordActionLog(srcAddr, dstAddr, rule.Action, ContentString)
 
 	go func() {
-		err := AppendWriteFile(Initialize.AlertPath, "\n"+ContentString)
+		err := AppendWriteFile(Parameter.AlertPath, "\n"+ContentString)
 		if err != nil {
 			fmt.Println("Error appending to alert file:", err.Error())
 		}
 
-		Initialize.ActionDescribeTriggerLogArray = append(Initialize.ActionDescribeTriggerLogArray, ActionDescribeLog)
+		Structure2.ActionDescribeTriggerLogArray = append(Structure2.ActionDescribeTriggerLogArray, ActionDescribeLog)
 		incrementPacketCount()
 		fmt.Println("Alerting packet")
 	}()
 	return nil
 }
 
-func (p *PacketHandler) SendPacket(rule *ruleStructure.RuleNodeValue) error {
+func (p *PacketHandler) SendPacket(rule *Structure.RuleNodeValue) error {
 	WriteContentPtr := p.parseMsgStringToValue(rule)
 	srcAddr, dstAddr := p.GetSrcAndDstAddrString()
 	ContentString := fmt.Sprintf("时间: %s\n", time.Now().Format(time.RFC3339)) + *WriteContentPtr
 	ActionDescribeLog := recordActionLog(srcAddr, dstAddr, rule.Action, ContentString)
 
 	go func() {
-		err := AppendWriteFile(Initialize.AlertPath, "\n"+ContentString)
+		err := AppendWriteFile(Parameter.AlertPath, "\n"+ContentString)
 		if err != nil {
 			fmt.Println("Error appending to alert file:", err.Error())
 		}
 
-		Initialize.ActionDescribeTriggerLogArray = append(Initialize.ActionDescribeTriggerLogArray, ActionDescribeLog)
+		Structure2.ActionDescribeTriggerLogArray = append(Structure2.ActionDescribeTriggerLogArray, ActionDescribeLog)
 		incrementPacketCount()
 		fmt.Println("Alerting packet")
 	}()
 
 	go func() {
-		Initialize.Mail.SetSubject(fmt.Sprintf("ids id:%d, ids name:%s", Initialize.IdsID, Initialize.IdsName))
-		Initialize.Mail.SetBody(ContentString)
-		err := Initialize.Mail.SendMail()
+		Structure2.Mail.SetSubject(fmt.Sprintf("ids id:%d, ids name:%s", Parameter.IdsID, Parameter.IdsName))
+		Structure2.Mail.SetBody(ContentString)
+		err := Structure2.Mail.SendMail()
 		if err != nil {
 			fmt.Println("Error sending mail:", err.Error())
 		}
@@ -151,20 +152,20 @@ func (p *PacketHandler) SendPacket(rule *ruleStructure.RuleNodeValue) error {
 }
 
 // DropIPv4Packets 封IP
-func (p *PacketHandler) DropIPv4Packets(rule *ruleStructure.RuleNodeValue) error {
+func (p *PacketHandler) DropIPv4Packets(rule *Structure.RuleNodeValue) error {
 	WriteContentPtr := p.parseMsgStringToValue(rule)
 	srcAddr, dstAddr := p.GetSrcAndDstAddrString()
 	ContentString := fmt.Sprintf("时间: %s\n", time.Now().Format(time.RFC3339)) + *WriteContentPtr
 	ActionDescribeLog := recordActionLog(srcAddr, dstAddr, rule.Action, ContentString)
 
 	go func() {
-		err := AppendWriteFile(Initialize.AlertPath, "\n"+ContentString)
+		err := AppendWriteFile(Parameter.AlertPath, "\n"+ContentString)
 		if err != nil {
 			fmt.Println("Error appending to alert file:", err.Error())
 		}
 
 		// Append to the log array
-		Initialize.ActionDescribeTriggerLogArray = append(Initialize.ActionDescribeTriggerLogArray, ActionDescribeLog)
+		Structure2.ActionDescribeTriggerLogArray = append(Structure2.ActionDescribeTriggerLogArray, ActionDescribeLog)
 		incrementPacketCount()
 		fmt.Println("Alerting packet")
 	}()
@@ -174,10 +175,11 @@ func (p *PacketHandler) DropIPv4Packets(rule *ruleStructure.RuleNodeValue) error
 		return err
 	}
 
-	Initialize.BanBanIPSet.Insert(Initialize.BanIPDescribe{
+	Structure2.MainBanIPSet.Insert(Structure.BanIPDescribe{
 		BanIP:     p.ipv4.SrcIP.String(),
 		BanRuleID: rule.ID,
 		Describe:  ContentString,
+		UnbanTime: time.Now().Add(time.Duration(rule.Option.BanTime) * time.Minute),
 	})
 	return nil
 }
