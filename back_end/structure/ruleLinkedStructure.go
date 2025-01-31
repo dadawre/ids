@@ -20,6 +20,7 @@ type Protocol struct {
 // RuleNodeValue 规则结构体
 type RuleNodeValue struct {
 	ID            int
+	RuleName      string
 	Protocols     []Protocol
 	Operators     []int8
 	Priority      int
