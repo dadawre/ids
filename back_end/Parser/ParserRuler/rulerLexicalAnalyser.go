@@ -19,6 +19,7 @@ type RuleParser struct {
 	operatorRegex *regexp.Regexp                     //逻辑表达式运算符正则表达式
 	priorityRegex *regexp.Regexp                     //优先级正则表达式
 	actionRegex   *regexp.Regexp                     //行为正则表达式
+	nameRegex     *regexp.Regexp                     //规则名正则表达式
 	banTimeRegex  *regexp.Regexp                     //封禁时间正则表达式
 	msgRegex      *regexp.Regexp                     //输出字符串正则表达式
 	stringRegex   *regexp.Regexp                     //string正则表达式
@@ -46,9 +47,10 @@ func NewRuleParser(ruleStr string, configVar map[string]*ParserConfig.ConfigVar)
 		priorityRegex: regexp.MustCompile(`priority (\d+)`),
 		actionRegex:   regexp.MustCompile(`action (pass|record|alert|send|drop)`),
 		banTimeRegex:  regexp.MustCompile(`^banTime.*[0-9]$`),
+		nameRegex:     regexp.MustCompile(`^name.*`),
 		msgRegex:      regexp.MustCompile(`msg:"([^"]*)"`),
 		msgEndRegex:   regexp.MustCompile(`"$`),
-		stringRegex:   regexp.MustCompile(`(\b|\#).+\b`),
+		stringRegex:   regexp.MustCompile(`(\b|).+\b`),
 		ConfigVarsMap: configVar,
 	}
 }
@@ -75,7 +77,7 @@ func (rp *RuleParser) Parse() (*Structure.RuleNodeValue, error) {
 	}
 
 	//fmt.Println(rp.pos, "     ", rp.Tokens[rp.pos])
-	err = rp.parsePriorityAndAction(result)
+	err = rp.parsePriorityAndActionAndName(result)
 	if err != nil {
 		return nil, err
 	}
@@ -161,11 +163,11 @@ func (rp *RuleParser) parseProtocols(result *Structure.RuleNodeValue) error {
 	return nil
 }
 
-// parsePriorityAndAction 解析优先级和动作
-func (rp *RuleParser) parsePriorityAndAction(result *Structure.RuleNodeValue) error {
+// parsePriorityAndActionAndName 解析优先级和动作
+func (rp *RuleParser) parsePriorityAndActionAndName(result *Structure.RuleNodeValue) error {
 	//fmt.Println(rp.pos, "   a  ", rp.Tokens[rp.pos])
 
-	if rp.pos+2 < len(rp.Tokens) {
+	if rp.pos+2 <= len(rp.Tokens) {
 		if rp.priorityRegex.MatchString(strings.Join(rp.Tokens[rp.pos:rp.pos+2], " ")) {
 			priority, _ := strconv.Atoi(rp.priorityRegex.FindStringSubmatch(strings.Join(rp.Tokens[rp.pos:rp.pos+2], " "))[1])
 			result.Priority = priority
@@ -173,7 +175,7 @@ func (rp *RuleParser) parsePriorityAndAction(result *Structure.RuleNodeValue) er
 			rp.pos += 2
 		}
 
-		if rp.actionRegex.MatchString(strings.Join(rp.Tokens[rp.pos:rp.pos+2], " ")) {
+		if rp.pos+2 <= len(rp.Tokens) && rp.actionRegex.MatchString(strings.Join(rp.Tokens[rp.pos:rp.pos+2], " ")) {
 			action := rp.actionRegex.FindStringSubmatch(strings.Join(rp.Tokens[rp.pos:rp.pos+2], " "))[1]
 			result.NetworkValues.ActionString = action
 			result.Action = mapStringToAction[action]
@@ -186,14 +188,26 @@ func (rp *RuleParser) parsePriorityAndAction(result *Structure.RuleNodeValue) er
 				}
 			}
 		}
+
+		if rp.pos+2 <= len(rp.Tokens) {
+			joinNameString := strings.Join(rp.Tokens[rp.pos:rp.pos+2], " ")
+
+			if rp.nameRegex.MatchString(joinNameString) {
+				name := strings.Split(joinNameString, " ")[1]
+				result.RuleName = name
+				rp.pos += 2
+			}
+		}
 	}
 	return nil
 }
 
 func (rp *RuleParser) parseOption(result *Structure.RuleNodeValue) error {
 	result.Option = &Structure.RuleOption{}
-	if rp.banTimeRegex.MatchString(strings.Join(rp.Tokens[rp.pos:rp.pos+2], " ")) {
-		banTime, _ := strconv.Atoi(rp.banTimeRegex.FindStringSubmatch(strings.Join(rp.Tokens[rp.pos:rp.pos+2], " "))[1])
+	joinString := strings.Join(rp.Tokens[rp.pos:rp.pos+2], " ")
+
+	if rp.banTimeRegex.MatchString(joinString) {
+		banTime, _ := strconv.Atoi(strings.Split(joinString, " ")[1])
 		result.Option.BanTime = banTime
 		rp.pos += 2
 	} else {

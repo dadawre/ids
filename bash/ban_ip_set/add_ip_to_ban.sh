@@ -1,19 +1,20 @@
 #!/bin/bash
 
-# 检查 ipset 集合是否存在，如果不存在则创建
-if ! ipset list ban_ip_network &>/dev/null; then
-    echo "Creating ipset collection 'ban_ip_network'..."
-    ipset create ban_ip_network hash:net
+# 检查 ban_ip 集合是否存在，如果不存在则创建
+if ! ipset list ban_ip &>/dev/null; then
+    echo "Creating ipset collection 'ban_ip'..."
+    ipset create ban_ip hash:ip
 fi
 
 # 检查是否提供了 IP 地址
 if [ -z "$1" ]; then
-    echo "用法: $0 <IP地址>"
+    echo "用法: $0 <IP地址> [超时时间]"
     exit 1
 fi
 
 IP="$1"
-unbanTimeOut="$2"
+UnbanTimeOut="$2"
+
 # 检查 ban_ip 集合是否存在
 if ! ipset list ban_ip &>/dev/null; then
     echo "ipset 集合 ban_ip 不存在，请先运行初始化脚本."
@@ -25,6 +26,13 @@ if ipset test ban_ip "$IP" &>/dev/null; then
     echo "IP $IP 已存在于 ban_ip 集合中."
 else
     echo "将 IP $IP 插入到 ban_ip 集合中..."
-    ipset add ban_ip "$IP" timeout "$unbanTimeOut"
+
+    # 根据是否存在超时参数执行不同命令
+    if [ -n "$UnbanTimeOut" ]; then
+        ipset add ban_ip "$IP" timeout "$UnbanTimeOut"
+    else
+        ipset add ban_ip "$IP"
+    fi
+
     echo "IP $IP 已成功插入."
 fi

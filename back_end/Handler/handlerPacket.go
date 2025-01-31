@@ -36,6 +36,7 @@ type PacketHandler struct {
 	udp                             *layers.UDP                                        //UDP结构体
 	dns                             *layers.DNS                                        //DNS结构体
 	payload                         *gopacket.Payload                                  //载荷结构体
+	packetLen                       int                                                //包大小
 }
 
 // initialContainer 初始化协议层容器和解码器
@@ -150,7 +151,9 @@ func (p *PacketHandler) PayloadMatch() {
 // HandlePacket 一个协程函数负责接收数据包并进行解包
 func (p *PacketHandler) HandlePacket() {
 	for packet := range p.packetChan {
-		_, err := p.decoder((*packet).Data(), &p.decoded)
+		packetData := (*packet).Data()
+		p.packetLen = len(packetData)
+		_, err := p.decoder(packetData, &p.decoded)
 		if err != nil {
 			fmt.Printf("Error decoding packet: %v\n", err)
 			continue

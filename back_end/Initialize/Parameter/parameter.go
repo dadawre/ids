@@ -8,6 +8,13 @@ var ( //配置键值对，默认值
 	AlertPath                    = "./log/alert.log"
 	HardwareDataRefreshFrequency = 500
 
+	SqlUser                = "root"
+	SqlPassword            = "root"
+	SqlHost                = "127.0.0.1:3307"
+	SqlSchemaName          = "IDSdata"
+	SqlRecordTableName     = "ActionDescribeTriggerLog"
+	SqlRecordTableFullName string
+
 	SmtpHost     string
 	SmtpPort     int
 	ToEmail      string
@@ -25,6 +32,21 @@ var ( //配置键值对，默认值
 	DeleteIpNetworkFromShPath  string
 	SaveBanIpNetworkShPath     string
 	BanIpNetworkConfigSavePath string
+
+	InitWhiteListShPath    string
+	AddIpToWhiteListShPath string
+	DeleteWhiteIpSh        string
+	SaveWhiteListShPath    string
+	WhiteListSavePath      string
+
+	InitWhiteListNetworkShPath    string
+	AddIpToWhiteListNetworkShPath string
+	DeleteWhiteIpNetworkSh        string
+	SaveWhiteListNetworkShPath    string
+	WhiteListNetworkSavePath      string
+
+	WhiteListPath string
+	BlackListPath string
 
 	SaveIptablesShPath     string
 	IptablesConfigSavePath string

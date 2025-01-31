@@ -2,8 +2,9 @@ package Initialize
 
 import (
 	"fmt"
-	Structure2 "graduationDesign/back_end/Initialize/InitializeStructure"
+	"graduationDesign/back_end/Initialize/InitializeStructure"
 	"graduationDesign/back_end/Initialize/Parameter"
+	"graduationDesign/back_end/List"
 	"graduationDesign/back_end/Parser/ParserConfig"
 	"graduationDesign/back_end/Parser/ParserRuler"
 	"graduationDesign/back_end/Structure"
@@ -25,6 +26,61 @@ func MainInitialize() {
 	BashScriptInitialize()
 	EndListenInitialize()
 	MailInitialize()
+	WhiteAndBlackListInitialize()
+	SQLInitialize()
+}
+func SQLInitialize() {
+	Parameter.SqlRecordTableFullName = Parameter.SqlSchemaName + "." + Parameter.SqlRecordTableName
+	// MySQL 连接信息 (请替换成你的 MySQL 配置)
+	dsn := Structure.ConnectAddrStr(Parameter.SqlUser, Parameter.SqlPassword, Parameter.SqlHost)
+
+	// 创建 MySQL 管理实例
+	var err error
+	InitializeStructure.LogSQLManager, err = Structure.NewMySQLManager(dsn)
+	if err != nil {
+		log.Fatalf("数据库连接失败: %v", err)
+	}
+
+	// 确保数据库存在
+	if err := InitializeStructure.LogSQLManager.EnsureDatabase(Parameter.SqlSchemaName); err != nil {
+		log.Fatalf("创建数据库失败: %v", err)
+	}
+
+	// 切换到 `IDSdata` 数据库
+	InitializeStructure.LogSQLManager.DB = InitializeStructure.LogSQLManager.DB.Exec("USE IDSdata")
+	fullPathTableName := Parameter.SqlSchemaName + "." + Parameter.SqlRecordTableName
+
+	// 检查表是否存在
+	exists, err := InitializeStructure.LogSQLManager.TableExists(Parameter.SqlSchemaName, Parameter.SqlRecordTableName)
+	if err != nil {
+		log.Fatalf("检查表失败: %v", err)
+	}
+	if !exists {
+		log.Println("表不存在，正在创建...")
+		if err := InitializeStructure.LogSQLManager.CreateTable(fullPathTableName); err != nil {
+			log.Fatalf("创建表失败: %v", err)
+		}
+	}
+}
+
+func WhiteAndBlackListInitialize() {
+	// 示例用法
+	whitelist, err := List.LoadAccessList(Parameter.WhiteListPath, List.WhiteListType)
+	if err != nil {
+		log.Fatalf("加载白名单失败:%d", err)
+		return
+	}
+
+	blacklist, err := List.LoadAccessList(Parameter.BlackListPath, List.BlackListType)
+	if err != nil {
+		log.Fatalf("加载黑名单失败:%d", err)
+		return
+	}
+
+	InitializeStructure.WhiteList = whitelist
+	InitializeStructure.BlackList = blacklist
+
+	fmt.Println(InitializeStructure.WhiteList, InitializeStructure.BlackList)
 }
 
 // EndConduction 程序结束时执行的函数
@@ -45,7 +101,25 @@ func EndConduction() {
 		fmt.Println("Error:", err)
 	}
 	// 打印脚本的输出
-	fmt.Println("ip_ban save output:", string(output))
+	fmt.Println("ip_network_ban save output:", string(output))
+
+	//保存ip_ban集合的ipset配置
+	cmd = exec.Command("/bin/bash", Parameter.SaveWhiteListShPath, Parameter.WhiteListSavePath)
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+	// 打印脚本的输出
+	fmt.Println("white list save output:", string(output))
+
+	//保存ip_ban集合的ipset配置
+	cmd = exec.Command("/bin/bash", Parameter.SaveWhiteListNetworkShPath, Parameter.WhiteListNetworkSavePath)
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+	// 打印脚本的输出
+	fmt.Println("white list network save output:", string(output))
 
 	//保存iptables集合的配置
 	cmd = exec.Command("/bin/bash", Parameter.SaveIptablesShPath, Parameter.IptablesConfigSavePath)
@@ -86,60 +160,74 @@ func BashScriptInitialize() {
 	if err != nil {
 		fmt.Println("Error:", err)
 	}
+	fmt.Println("Output:", string(output))
 
 	cmd = exec.Command("/bin/bash", Parameter.InitBanIpNetWorkShPath)
 	output, err = cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("Error:", err)
 	}
-	// 打印脚本的输出
 	fmt.Println("Output:", string(output))
 
+	cmd = exec.Command("/bin/bash", Parameter.InitWhiteListShPath)
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Initialize White Set Error:", err)
+	}
+	fmt.Println("Output:", string(output))
+
+	cmd = exec.Command("/bin/bash", Parameter.InitWhiteListNetworkShPath)
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Initialize White Network Set  Error:", err)
+	}
+	// 打印脚本的输出
+	fmt.Println("Output:", string(output))
 }
 
 func ConfigInitialize() {
-	Structure2.ConfigLexer = ParserConfig.NewConfigLexer(Parameter.ConfigPath) //词法分析器
-	confTokens := Structure2.ConfigLexer.GetAllToken()                         //Token标志数组
+	InitializeStructure.ConfigLexer = ParserConfig.NewConfigLexer(Parameter.ConfigPath) //词法分析器
+	confTokens := InitializeStructure.ConfigLexer.GetAllToken()                         //Token标志数组
 
-	Structure2.ConfigParser = ParserConfig.NewConfigparser(&confTokens) //语法分析器
-	Structure2.ConfigParser.ParseAllTokens()                            //语法解析
+	InitializeStructure.ConfigParser = ParserConfig.NewConfigparser(&confTokens) //语法分析器
+	InitializeStructure.ConfigParser.ParseAllTokens()                            //语法解析
 
-	Structure2.ConfigVars = Structure2.ConfigParser.ConfigVars //变量
+	InitializeStructure.ConfigVars = InitializeStructure.ConfigParser.ConfigVars //变量
 
-	Structure2.RulePaths = Structure2.ConfigParser.RulePaths //规则路径变量
+	InitializeStructure.RulePaths = InitializeStructure.ConfigParser.RulePaths //规则路径变量
 
-	Structure2.ConfigMapNameToValue = Structure2.ConfigParser.ConfigMapNameToValue //配置变量键值对
+	InitializeStructure.ConfigMapNameToValue = InitializeStructure.ConfigParser.ConfigMapNameToValue //配置变量键值对
 
 }
 
 // RulesInitialize 初始化规则链表和数组
 func RulesInitialize() {
-	Structure2.ListRules = &Structure.RuleLinkedList{}
-	Structure2.MainRulerParser = ParserRuler.NewRuleParser("", Structure2.ConfigVars)
+	InitializeStructure.ListRules = &Structure.RuleLinkedList{}
+	InitializeStructure.MainRulerParser = ParserRuler.NewRuleParser("", InitializeStructure.ConfigVars)
 
-	for _, path := range Structure2.RulePaths {
+	for _, path := range InitializeStructure.RulePaths {
 		content, err := os.ReadFile(*path)
 		if err != nil {
 			log.Fatalf("Error reading file: %v", err)
 		}
 
 		rule := string(content)
-		Structure2.MainRulerParser.Refresh(rule)
-		err = Structure2.MainRulerParser.GetAllRule(Structure2.ListRules)
+		InitializeStructure.MainRulerParser.Refresh(rule)
+		err = InitializeStructure.MainRulerParser.GetAllRule(InitializeStructure.ListRules)
 
 		if err != nil {
 			log.Printf("Error parsing rule: %v", err)
 		}
 	}
 	//fmt.Println("---------------------------------")
-	//fmt.Println(ListRules.GetHead().RuleValue)
-	Structure2.ArrayRuleStrings = Structure2.ListRules.GetStringArray()
+	//fmt.Println(InitializeStructure.ListRules.GetHead().RuleValue)
+	InitializeStructure.ArrayRuleStrings = InitializeStructure.ListRules.GetStringArray()
 	//fmt.Println(ArrayRuleStrings)
 }
 
 func VariableInitialize() {
-	for key, value := range Structure2.ConfigMapNameToValue {
-		if varPtr, exists := Structure2.MapVariableNameToVariable[key]; exists {
+	for key, value := range InitializeStructure.ConfigMapNameToValue {
+		if varPtr, exists := InitializeStructure.MapVariableNameToVariable[key]; exists {
 			num, err := strconv.Atoi(value)
 			if err == nil {
 				*(varPtr.(*int)) = num
@@ -153,7 +241,7 @@ func VariableInitialize() {
 }
 
 func MailInitialize() {
-	Structure2.Mail = Structure2.Mail.SetSmtpHost(Parameter.SmtpHost).
+	InitializeStructure.Mail = InitializeStructure.Mail.SetSmtpHost(Parameter.SmtpHost).
 		SetSmtpPort(strconv.Itoa(Parameter.SmtpPort)).
 		SetToEmail(Parameter.ToEmail).
 		SetAuthEmail(Parameter.AuthEmail).

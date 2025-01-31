@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/google/gopacket/layers"
 	"graduationDesign/back_end/Action"
-	Structure2 "graduationDesign/back_end/Initialize/InitializeStructure"
+	"graduationDesign/back_end/Initialize/InitializeStructure"
 	"graduationDesign/back_end/Initialize/Parameter"
 	"graduationDesign/back_end/Structure"
 	"path/filepath"
@@ -17,7 +17,6 @@ var (
 	ReceivePacketCount int32
 )
 
-// Action标识符
 const (
 	PacketPassAction = iota + 1
 	PacketRecordAction
@@ -26,160 +25,187 @@ const (
 	PacketDropAction
 )
 
-// 增加线程安全的递增函数
 func incrementPacketCount() {
-	atomic.AddInt32(&ReceivePacketCount, 1)
-	fmt.Println("当前接收数据包个数:", atomic.LoadInt32(&ReceivePacketCount))
+	count := atomic.AddInt32(&ReceivePacketCount, 1)
+	if count%100 == 0 { // 每100个包打印一次计数，减少IO压力
+		fmt.Println("当前接收数据包个数:", count)
+	}
 }
 
 func (p *PacketHandler) GetSrcAndDstAddrString() (string, string) {
-	if p.decoded[1] == layers.LayerTypeIPv4 {
+	switch p.decoded[1] {
+	case layers.LayerTypeIPv4:
 		return p.ipv4.SrcIP.String(), p.ipv4.DstIP.String()
-	} else if p.decoded[1] == layers.LayerTypeIPv6 {
-		return p.ipv6.SrcIP.String(), p.ipv4.DstIP.String()
-	} else if p.decoded[0] == layers.LayerTypeEthernet {
-		return strings.Replace(p.eth.SrcMAC.String(), ":", "..", -1), strings.Replace(p.eth.DstMAC.String(), ":", "..", -1)
+	case layers.LayerTypeIPv6:
+		return p.ipv6.SrcIP.String(), p.ipv6.DstIP.String() // 修复IPv6目标地址错误
+	case layers.LayerTypeARP:
+		return string(p.arp.SourceProtAddress), string(p.arp.DstProtAddress)
+	case layers.LayerTypeEthernet:
+		src := strings.Replace(p.eth.SrcMAC.String(), ":", "..", -1)
+		dst := strings.Replace(p.eth.DstMAC.String(), ":", "..", -1)
+		return src, dst
+	default:
+		return "", ""
 	}
-	return "", ""
 }
 
-// 记录Action的日志
-func recordActionLog(srcAddr, dstAddr string, action int8, message string) Structure.ActionDescribeTriggerLog {
-	return Structure.ActionDescribeTriggerLog{
-		SrcAddr:         srcAddr,
-		DstAddr:         dstAddr,
-		ActionType:      action,
-		DescribeMessage: message,
+func (p *PacketHandler) GetSrcAndDstPortAddrString() (string, string) {
+	if len(p.decoded) <= 2 {
+		return "", ""
+	}
+	switch p.decoded[2] {
+	case layers.LayerTypeTCP:
+		return p.tcp.SrcPort.String(), p.tcp.DstPort.String()
+	case layers.LayerTypeUDP:
+		return p.udp.SrcPort.String(), p.udp.DstPort.String()
+	default:
+		return "", ""
 	}
 }
+
+func (p *PacketHandler) GetTcpFlag() string {
+	if len(p.decoded) >= 3 && p.decoded[2] == layers.LayerTypeTCP {
+		flags := []bool{p.tcp.URG, p.tcp.ACK, p.tcp.PSH, p.tcp.RST, p.tcp.SYN, p.tcp.FIN}
+		b := make([]byte, len(flags))
+		for i, flag := range flags {
+			b[i] = '0'
+			if flag {
+				b[i] = '1'
+			}
+		}
+		return string(b)
+	}
+	return ""
+}
+
+func (p *PacketHandler) GetTopProtocol() string {
+	if len(p.decoded) == 0 {
+		return "unknown"
+	}
+	return p.decoded[len(p.decoded)-1].String()
+}
+
+func (p *PacketHandler) ConductionActionLog(rule *Structure.RuleNodeValue) (*Structure.ActionDescribeTriggerLog, string) {
+	writeContent := p.parseMsgStringToValue(rule)
+	dataString := time.Now().Format(time.RFC3339)
+	contentString := fmt.Sprintf("时间: %s\n%s", dataString, *writeContent)
+
+	srcIP, dstIP := p.GetSrcAndDstAddrString()
+	srcPort, dstPort := p.GetSrcAndDstPortAddrString()
+
+	return &Structure.ActionDescribeTriggerLog{
+		SrcIPAddr:       srcIP,
+		DstIPAddr:       dstIP,
+		SrcPortAddr:     srcPort,
+		DstPortAddr:     dstPort,
+		TopProtocol:     p.GetTopProtocol(),
+		RuleID:          rule.ID,
+		RuleName:        rule.RuleName,
+		DescribeMessage: *writeContent,
+		TriggerTime:     dataString,
+		ActionType:      rule.Action,
+		TcpFlag:         p.GetTcpFlag(),
+		PacketLength:    p.packetLen,
+	}, contentString
+}
+
 func (p *PacketHandler) defaultPass() {
 	incrementPacketCount()
 }
 
+func (p *PacketHandler) logAndIncrement(log *Structure.ActionDescribeTriggerLog) {
+	go func(l *Structure.ActionDescribeTriggerLog) {
+		if err := InitializeStructure.LogSQLManager.InsertRecord(Parameter.SqlRecordTableFullName, l); err != nil {
+			fmt.Printf("数据库插入错误: %v\n", err)
+		}
+		incrementPacketCount()
+	}(log)
+}
+
 func (p *PacketHandler) PassPacket(rule *Structure.RuleNodeValue) error {
-	// 写入日志内容
-	WriteContentPtr := p.parseMsgStringToValue(rule)
-	ContentString := fmt.Sprintf("时间: %s\n", time.Now().Format(time.RFC3339)) + *WriteContentPtr
-
-	srcAddr, dstAddr := p.GetSrcAndDstAddrString()
-	ActionDescribeLog := recordActionLog(srcAddr, dstAddr, rule.Action, ContentString)
-
-	Structure2.ActionDescribeTriggerLogArray = append(Structure2.ActionDescribeTriggerLogArray, ActionDescribeLog)
-	incrementPacketCount()
+	log, _ := p.ConductionActionLog(rule)
+	p.logAndIncrement(log)
 	return nil
 }
 
 func (p *PacketHandler) RecordPacket(rule *Structure.RuleNodeValue) error {
-	// 写入日志内容
-	WriteContentPtr := p.parseMsgStringToValue(rule)
-	ContentString := fmt.Sprintf("时间: %s\n", time.Now().Format(time.RFC3339)) + *WriteContentPtr
+	log, content := p.ConductionActionLog(rule)
 
-	srcAddr, dstAddr := p.GetSrcAndDstAddrString()
-	ActionDescribeLog := recordActionLog(srcAddr, dstAddr, rule.Action, ContentString)
-
-	//顶端协议
-	PacketTopProtocol := p.decoded[len(p.decoded)-1].String()
-
-	PacketFileName := ActionDescribeLog.SrcAddr
-	folderString := filepath.Join(Parameter.LogPath, PacketFileName)
-
-	err := CreateFile(folderString)
-	if err != nil {
-		fmt.Println("Error creating file:", err.Error())
-	}
-
-	go func() {
-		err := AppendWriteFile(filepath.Join(folderString, PacketTopProtocol), "\n"+ContentString)
-		if err != nil {
-			fmt.Println("Error appending to file:", err.Error())
+	go func(c string, l *Structure.ActionDescribeTriggerLog) {
+		folder := filepath.Join(Parameter.LogPath, l.SrcIPAddr)
+		if err := CreateFile(folder); err != nil {
+			fmt.Printf("创建目录失败: %v\n", err)
+			return
 		}
 
-		Structure2.ActionDescribeTriggerLogArray = append(Structure2.ActionDescribeTriggerLogArray, ActionDescribeLog)
-		incrementPacketCount()
+		filePath := filepath.Join(folder, l.TopProtocol)
+		if err := AppendWriteFile(filePath, "\n"+c); err != nil {
+			fmt.Printf("写入文件失败: %v\n", err)
+		}
+		p.logAndIncrement(l)
 		fmt.Println("Recording packet")
-	}()
+	}(content, log)
 
 	return nil
 }
 
 func (p *PacketHandler) AlertPacket(rule *Structure.RuleNodeValue) error {
-	WriteContentPtr := p.parseMsgStringToValue(rule)
-	ContentString := fmt.Sprintf("时间: %s\n", time.Now().Format(time.RFC3339)) + *WriteContentPtr
-	srcAddr, dstAddr := p.GetSrcAndDstAddrString()
-	ActionDescribeLog := recordActionLog(srcAddr, dstAddr, rule.Action, ContentString)
+	log, content := p.ConductionActionLog(rule)
 
-	go func() {
-		err := AppendWriteFile(Parameter.AlertPath, "\n"+ContentString)
-		if err != nil {
-			fmt.Println("Error appending to alert file:", err.Error())
+	go func(c string, l *Structure.ActionDescribeTriggerLog) {
+		if err := AppendWriteFile(Parameter.AlertPath, "\n"+c); err != nil {
+			fmt.Printf("告警文件写入失败: %v\n", err)
 		}
-
-		Structure2.ActionDescribeTriggerLogArray = append(Structure2.ActionDescribeTriggerLogArray, ActionDescribeLog)
-		incrementPacketCount()
+		p.logAndIncrement(l)
 		fmt.Println("Alerting packet")
-	}()
+	}(content, log)
+
 	return nil
 }
 
 func (p *PacketHandler) SendPacket(rule *Structure.RuleNodeValue) error {
-	WriteContentPtr := p.parseMsgStringToValue(rule)
-	srcAddr, dstAddr := p.GetSrcAndDstAddrString()
-	ContentString := fmt.Sprintf("时间: %s\n", time.Now().Format(time.RFC3339)) + *WriteContentPtr
-	ActionDescribeLog := recordActionLog(srcAddr, dstAddr, rule.Action, ContentString)
+	log, content := p.ConductionActionLog(rule)
 
-	go func() {
-		err := AppendWriteFile(Parameter.AlertPath, "\n"+ContentString)
-		if err != nil {
-			fmt.Println("Error appending to alert file:", err.Error())
+	go func(c string, l *Structure.ActionDescribeTriggerLog) {
+		if err := AppendWriteFile(Parameter.AlertPath, "\n"+c); err != nil {
+			fmt.Printf("告警文件写入失败: %v\n", err)
 		}
 
-		Structure2.ActionDescribeTriggerLogArray = append(Structure2.ActionDescribeTriggerLogArray, ActionDescribeLog)
-		incrementPacketCount()
-		fmt.Println("Alerting packet")
-	}()
-
-	go func() {
-		Structure2.Mail.SetSubject(fmt.Sprintf("ids id:%d, ids name:%s", Parameter.IdsID, Parameter.IdsName))
-		Structure2.Mail.SetBody(ContentString)
-		err := Structure2.Mail.SendMail()
-		if err != nil {
-			fmt.Println("Error sending mail:", err.Error())
+		InitializeStructure.Mail.SetSubject(fmt.Sprintf("IDS告警 - ID:%d 名称:%s", Parameter.IdsID, Parameter.IdsName))
+		InitializeStructure.Mail.SetBody(c)
+		if err := InitializeStructure.Mail.SendMail(); err != nil {
+			fmt.Printf("邮件发送失败: %v\n", err)
 		}
+		p.logAndIncrement(l)
 		fmt.Println("Sending packet")
-	}()
+	}(content, log)
 
 	return nil
 }
 
-// DropIPv4Packets 封IP
 func (p *PacketHandler) DropIPv4Packets(rule *Structure.RuleNodeValue) error {
-	WriteContentPtr := p.parseMsgStringToValue(rule)
-	srcAddr, dstAddr := p.GetSrcAndDstAddrString()
-	ContentString := fmt.Sprintf("时间: %s\n", time.Now().Format(time.RFC3339)) + *WriteContentPtr
-	ActionDescribeLog := recordActionLog(srcAddr, dstAddr, rule.Action, ContentString)
+	log, content := p.ConductionActionLog(rule)
 
-	go func() {
-		err := AppendWriteFile(Parameter.AlertPath, "\n"+ContentString)
-		if err != nil {
-			fmt.Println("Error appending to alert file:", err.Error())
+	go func(c string, l *Structure.ActionDescribeTriggerLog) {
+		if err := AppendWriteFile(Parameter.AlertPath, "\n"+c); err != nil {
+			fmt.Printf("告警文件写入失败: %v\n", err)
 		}
 
-		// Append to the log array
-		Structure2.ActionDescribeTriggerLogArray = append(Structure2.ActionDescribeTriggerLogArray, ActionDescribeLog)
-		incrementPacketCount()
-		fmt.Println("Alerting packet")
-	}()
+		if err := Action.DropIP(l.SrcIPAddr); err != nil {
+			fmt.Println(err)
+		}
 
-	err := Action.DropIP(p.ipv4.SrcIP.String())
-	if err != nil {
-		return err
-	}
+		InitializeStructure.MainBanIPSet.Insert(Structure.BanIPDescribe{
+			BanIP:     l.SrcIPAddr,
+			BanRuleID: rule.ID,
+			Describe:  c,
+			UnbanTime: time.Now().Add(time.Duration(rule.Option.BanTime) * time.Minute),
+		})
 
-	Structure2.MainBanIPSet.Insert(Structure.BanIPDescribe{
-		BanIP:     p.ipv4.SrcIP.String(),
-		BanRuleID: rule.ID,
-		Describe:  ContentString,
-		UnbanTime: time.Now().Add(time.Duration(rule.Option.BanTime) * time.Minute),
-	})
+		p.logAndIncrement(l)
+
+		fmt.Println("Drop packet")
+	}(content, log)
+
 	return nil
 }

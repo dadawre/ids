@@ -2,37 +2,34 @@ package NetworkRecord
 
 import (
 	"encoding/json"
-	"fmt"
-	Structure2 "graduationDesign/back_end/Initialize/InitializeStructure"
 	"graduationDesign/back_end/Structure"
 	"net/http"
 	"strconv"
-	"strings"
 )
 
 // 处理前端传来的筛选条件
 func filterLogs(filter map[string]string) []Structure.ActionDescribeTriggerLog {
 
 	var filteredLogs []Structure.ActionDescribeTriggerLog
-	for _, log := range Structure2.ActionDescribeTriggerLogArray {
-		match := true
-		// 根据前端传来的字段进行过滤
-		if filter["DescribeMessage"] != "" && !strings.Contains(log.DescribeMessage, filter["DescribeMessage"]) {
-			match = false
-		}
-		if filter["SrcAddr"] != "" && !strings.Contains(log.SrcAddr, filter["SrcAddr"]) {
-			match = false
-		}
-		if filter["DstAddr"] != "" && !strings.Contains(log.DstAddr, filter["DstAddr"]) {
-			match = false
-		}
-		if filter["ActionType"] != "" && fmt.Sprintf("%d", log.ActionType) != filter["ActionType"] {
-			match = false
-		}
-		if match {
-			filteredLogs = append(filteredLogs, log)
-		}
-	}
+	//for _, log := range InitializeStructure.ActionDescribeTriggerLogArray {
+	//	match := true
+	//	// 根据前端传来的字段进行过滤
+	//	if filter["DescribeMessage"] != "" && !strings.Contains(log.DescribeMessage, filter["DescribeMessage"]) {
+	//		match = false
+	//	}
+	//	if filter["SrcIPAddr"] != "" && !strings.Contains(log.SrcIPAddr, filter["SrcIPAddr"]) {
+	//		match = false
+	//	}
+	//	if filter["DstIPAddr"] != "" && !strings.Contains(log.DstIPAddr, filter["DstIPAddr"]) {
+	//		match = false
+	//	}
+	//	if filter["ActionType"] != "" && fmt.Sprintf("%d", log.ActionType) != filter["ActionType"] {
+	//		match = false
+	//	}
+	//	if match {
+	//		filteredLogs = append(filteredLogs, log)
+	//	}
+	//}
 	return filteredLogs
 }
 
@@ -44,8 +41,8 @@ func GetLogs(w http.ResponseWriter, r *http.Request) {
 
 	// 从查询参数中读取筛选条件
 	filter["DescribeMessage"] = query.Get("DescribeMessage")
-	filter["SrcAddr"] = query.Get("SrcAddr")
-	filter["DstAddr"] = query.Get("DstAddr")
+	filter["SrcIPAddr"] = query.Get("SrcIPAddr")
+	filter["DstIPAddr"] = query.Get("DstIPAddr")
 	filter["ActionType"] = query.Get("ActionType")
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	pageSize, _ := strconv.Atoi(r.URL.Query().Get("pageSize"))

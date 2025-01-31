@@ -2,6 +2,7 @@ package InitializeStructure
 
 import (
 	"graduationDesign/back_end/Initialize/Parameter"
+	"graduationDesign/back_end/List"
 	"graduationDesign/back_end/Parser/ParserConfig"
 	"graduationDesign/back_end/Parser/ParserRuler"
 	"graduationDesign/back_end/Structure"
@@ -9,18 +10,21 @@ import (
 
 var ( //通用变量
 
-	ConfigVars                    map[string]*ParserConfig.ConfigVar              //配置变量数组
-	RulePaths                     []*string                                       //路径变量数组
-	ConfigMapNameToValue          map[string]string                               //配置变量键值对
-	ConfigLexer                   *ParserConfig.ConfigLexer                       //配置文件词法分析器
-	ConfigParser                  *ParserConfig.Configparser                      //配置文件语法分析器
-	MainRulerParser               *ParserRuler.RuleParser                         //规则解析器
-	ListRules                     *Structure.RuleLinkedList                       //规则链表
-	ArrayRuleStrings              []Structure.RuleNodeStringValue                 //规则字符串结构体数组
-	Mail                          = &Structure.MailSetting{}                      //邮箱结构体
-	ActionDescribeTriggerLogArray = make([]Structure.ActionDescribeTriggerLog, 0) //Action执行日志
-	MainBanIPSet                  = Structure.NewBanIPSet(5 * 1000000)            //封禁IP集合
-	MapVariableNameToVariable     = map[string]interface{}{                       // 配置变量键值对，用interface{}任意类型表示
+	ConfigVars           map[string]*ParserConfig.ConfigVar //配置变量数组
+	RulePaths            []*string                          //路径变量数组
+	ConfigMapNameToValue map[string]string                  //配置变量键值对
+	ConfigLexer          *ParserConfig.ConfigLexer          //配置文件词法分析器
+	ConfigParser         *ParserConfig.Configparser         //配置文件语法分析器
+	MainRulerParser      *ParserRuler.RuleParser            //规则解析器
+	ListRules            *Structure.RuleLinkedList          //规则链表
+	ArrayRuleStrings     []Structure.RuleNodeStringValue    //规则字符串结构体数组
+	Mail                 = &Structure.MailSetting{}         //邮箱结构体
+	//ActionDescribeTriggerLogArray = make([]Structure.ActionDescribeTriggerLog, 0) //Action执行日志
+	MainBanIPSet              = Structure.NewBanIPSet(5 * 1000000) //封禁IP集合
+	WhiteList                 *List.AccessList                     //白名单
+	BlackList                 *List.AccessList                     //黑名单
+	LogSQLManager             *Structure.MySQLManager              //日志SQL驱动器
+	MapVariableNameToVariable = map[string]interface{}{            // 配置变量键值对，用interface{}任意类型表示
 		"min_coroutine":     &Parameter.MinCoroutine,                 //最大数据包解析协程
 		"max_coroutine":     &Parameter.MaxCoroutine,                 //最少数据包解析协程
 		"config_path":       &Parameter.ConfigPath,                   //配置文件路径
@@ -46,14 +50,29 @@ var ( //通用变量
 		"save_ban_ip_network_sh_path":       &Parameter.SaveBanIpNetworkShPath,     //保存ban_ip_network ipset配置到指定文件的脚本文件路径
 		"ban_ip_network_save_path":          &Parameter.BanIpNetworkConfigSavePath, //ban_ip_network配置文件路径
 
+		"init_white_list_sh_path":      &Parameter.InitWhiteListShPath,
+		"add_ip_to_white_list_sh_path": &Parameter.AddIpToWhiteListShPath,
+		"delete_white_ip_sh":           &Parameter.DeleteWhiteIpSh,
+		"save_white_list_sh_path":      &Parameter.SaveWhiteListShPath,
+		"white_list_save_path":         &Parameter.WhiteListSavePath,
+
+		"init_white_list_network_sh_path":      &Parameter.InitWhiteListNetworkShPath,
+		"add_ip_to_white_list_network_sh_path": &Parameter.AddIpToWhiteListNetworkShPath,
+		"delete_white_ip_network_sh":           &Parameter.DeleteWhiteIpNetworkSh,
+		"save_white_list_network_sh_path":      &Parameter.SaveWhiteListNetworkShPath,
+		"white_list_network_save_path":         &Parameter.WhiteListNetworkSavePath,
+
 		"save_iptables_sh_path": &Parameter.SaveIptablesShPath,     //保存iptables配置到指定文件的脚本文件路径
 		"iptables_save_path":    &Parameter.IptablesConfigSavePath, //iptables配置文件路径
+
+		"white_list_path": &Parameter.WhiteListPath,
+		"black_list_path": &Parameter.BlackListPath,
 
 		"ids_mode": &Parameter.IdsMode, //ids模式
 		"ids_name": &Parameter.IdsName, //ids主机名
 		"ids_id":   &Parameter.IdsID,   //ids标识符
 
-		"account":  &Parameter.Account,
-		"password": &Parameter.Password,
+		"account":  &Parameter.Account,  //账户
+		"password": &Parameter.Password, //密码
 	}
 )
