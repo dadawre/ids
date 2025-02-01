@@ -1,95 +1,71 @@
 "use client";
-import React, { useEffect, useState, useRef } from 'react';
-import { Table, Input, Space, Button, Pagination } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
-import Highlighter from 'react-highlight-words';
-import axios from 'axios';
+import React, { useEffect, useState, useRef } from "react";
+import { Table, Input, Space, Button, Pagination } from "antd";
+import { SearchOutlined } from "@ant-design/icons";
+import Highlighter from "react-highlight-words";
+import axios from "axios";
 
 export default function RecordTable() {
     const [data, setData] = useState([]);
-    const [searchText, setSearchText] = useState('');
-    const [searchedColumn, setSearchedColumn] = useState('');
+    const [searchText, setSearchText] = useState("");
+    const [searchedColumn, setSearchedColumn] = useState("");
     const searchInput = useRef(null);
 
-    // 用于保存搜索条件
-    const [filters, setFilters] = useState({
-        DescribeMessage: '',
-        SrcAddr: '',
-        DstAddr: '',
-        ActionType: '',
-    });
-
-    // 用于分页
+    const [filters, setFilters] = useState({});
     const [pagination, setPagination] = useState({
         current: 1,
         pageSize: 10,
         total: 0,
     });
 
-    // Fetch data from the backend with filters and pagination
     const fetchData = () => {
-        axios.get('http://localhost:8080/logData', {
-            params: {
-                ...filters,
-                page: pagination.current,
-                pageSize: pagination.pageSize,
-            },
-        })
-            .then(response => {
-                setData(response.data.items); // Ensure this matches the structure of the response
-                setPagination(prevPagination => ({
+        axios
+            .get("http://localhost:8080/logData", {
+                params: {
+                    ...filters,
+                    page: pagination.current,
+                    pageSize: pagination.pageSize,
+                },
+            })
+            .then((response) => {
+                setData(response.data.items);
+                setPagination((prevPagination) => ({
                     ...prevPagination,
-                    total: response.data.total,  // Update total with the response from the backend
+                    total: response.data.total,
                 }));
             })
-            .catch(error => {
-                console.error("There was an error fetching the data!", error);
+            .catch((error) => {
+                console.error("Error fetching data", error);
             });
     };
 
     useEffect(() => {
         fetchData();
-    }, [filters, pagination.current, pagination.pageSize]); // Re-fetch when filters or pagination change
+    }, [filters, pagination.current, pagination.pageSize]);
 
     const handleSearch = (selectedKeys, confirm, dataIndex) => {
         confirm();
         setSearchText(selectedKeys[0]);
         setSearchedColumn(dataIndex);
-
-        // Update filter conditions
-        setFilters(prevFilters => ({
-            ...prevFilters,
-            [dataIndex]: selectedKeys[0],
-        }));
+        setFilters((prev) => ({ ...prev, [dataIndex]: selectedKeys[0] }));
     };
 
     const handleReset = (clearFilters, dataIndex) => {
         clearFilters();
-        setSearchText('');
-        setFilters(prevFilters => ({
-            ...prevFilters,
-            [dataIndex]: '',
-        }));
+        setSearchText("");
+        setFilters((prev) => ({ ...prev, [dataIndex]: "" }));
     };
 
     const getColumnSearchProps = (dataIndex) => ({
         filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters, close }) => (
-            <div
-                style={{
-                    padding: 8,
-                }}
-                onKeyDown={(e) => e.stopPropagation()}
-            >
+            <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
                 <Input
                     ref={searchInput}
                     placeholder={`Search ${dataIndex}`}
                     value={selectedKeys[0]}
                     onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
                     onPressEnter={() => handleSearch(selectedKeys, confirm, dataIndex)}
-                    style={{
-                        marginBottom: 8,
-                        display: 'block',
-                    }}
+                    style={{ marginBottom: 8, display: "block" }}
                 />
                 <Space>
                     <Button
@@ -97,72 +73,32 @@ export default function RecordTable() {
                         onClick={() => handleSearch(selectedKeys, confirm, dataIndex)}
                         icon={<SearchOutlined />}
                         size="small"
-                        style={{
-                            width: 90,
-                        }}
+                        style={{ width: 90 }}
                     >
                         Search
                     </Button>
                     <Button
                         onClick={() => clearFilters && handleReset(clearFilters, dataIndex)}
                         size="small"
-                        style={{
-                            width: 90,
-                        }}
+                        style={{ width: 90 }}
                     >
                         Reset
                     </Button>
-                    <Button
-                        type="link"
-                        size="small"
-                        onClick={() => {
-                            confirm({
-                                closeDropdown: false,
-                            });
-                            setSearchText(selectedKeys[0]);
-                            setSearchedColumn(dataIndex);
-                        }}
-                    >
-                        Filter
-                    </Button>
-                    <Button
-                        type="link"
-                        size="small"
-                        onClick={() => {
-                            close();
-                        }}
-                    >
+                    <Button type="link" size="small" onClick={() => close()}>
                         Close
                     </Button>
                 </Space>
             </div>
         ),
-        filterIcon: (filtered) => (
-            <SearchOutlined
-                style={{
-                    color: filtered ? '#1677ff' : undefined,
-                }}
-            />
-        ),
-        onFilter: (value, record) =>
-            record[dataIndex].toString().toLowerCase().includes(value.toLowerCase()),
-        filterDropdownProps: {
-            onOpenChange(open) {
-                if (open) {
-                    setTimeout(() => searchInput.current?.select(), 100);
-                }
-            },
-        },
+        filterIcon: (filtered) => <SearchOutlined style={{ color: filtered ? "#1677ff" : undefined }} />,
+        onFilter: (value, record) => record[dataIndex]?.toString().toLowerCase().includes(value.toLowerCase()),
         render: (text) =>
             searchedColumn === dataIndex ? (
                 <Highlighter
-                    highlightStyle={{
-                        backgroundColor: '#ffc069',
-                        padding: 0,
-                    }}
+                    highlightStyle={{ backgroundColor: "#ffc069", padding: 0 }}
                     searchWords={[searchText]}
                     autoEscape
-                    textToHighlight={text ? text.toString() : ''}
+                    textToHighlight={text ? text.toString() : ""}
                 />
             ) : (
                 text
@@ -170,40 +106,23 @@ export default function RecordTable() {
     });
 
     const columns = [
-        {
-            title: 'Describe Message',
-            dataIndex: 'DescribeMessage',
-            key: 'DescribeMessage',
-            width: '30%',
-            ...getColumnSearchProps('DescribeMessage'),
-        },
-        {
-            title: 'Action Type',
-            dataIndex: 'ActionType',
-            key: 'ActionType',
-            width: '20%',
-            ...getColumnSearchProps('ActionType'),
-        },
-        {
-            title: 'Source Address',
-            dataIndex: 'SrcAddr',
-            key: 'SrcAddr',
-            ...getColumnSearchProps('SrcAddr'),
-        },
-        {
-            title: 'Destination Address',
-            dataIndex: 'DstAddr',
-            key: 'DstAddr',
-            ...getColumnSearchProps('DstAddr'),
-        },
+        { title: "ID", dataIndex: "ID", key: "ID",width: "7%", ...getColumnSearchProps("ID"), fixed: "top" },
+        { title: "Src IP", dataIndex: "SrcIPAddr",width: "15%", key: "SrcIPAddr", ...getColumnSearchProps("SrcIPAddr") },
+        { title: "Dst IP", dataIndex: "DstIPAddr",width: "15%", key: "DstIPAddr", ...getColumnSearchProps("DstIPAddr") },
+        { title: "Src Port", dataIndex: "SrcPortAddr",width: "12%", key: "SrcPortAddr", ...getColumnSearchProps("SrcPortAddr") },
+        { title: "Dst Port", dataIndex: "DstPortAddr",width: "12%", key: "DstPortAddr", ...getColumnSearchProps("DstPortAddr") },
+        { title: "Protocol", dataIndex: "TopProtocol",width: "12%", key: "TopProtocol", ...getColumnSearchProps("TopProtocol") },
+        { title: "Rule ID", dataIndex: "RuleID",width: "10%", key: "RuleID", ...getColumnSearchProps("RuleID") },
+        { title: "Rule Name", dataIndex: "RuleName",width: "15%", key: "RuleName", ...getColumnSearchProps("RuleName") },
+        { title: "Message", dataIndex: "DescribeMessage",width: "25%", key: "DescribeMessage", ...getColumnSearchProps("DescribeMessage") },
+        { title: "Trigger Time", dataIndex: "TriggerTime",width: "15%", key: "TriggerTime", ...getColumnSearchProps("TriggerTime"), fixed: "top" },
+        { title: "Action", dataIndex: "ActionType",width: "10%", key: "ActionType", ...getColumnSearchProps("ActionType") },
+        { title: "TCP Flag", dataIndex: "TcpFlag",width: "10%", key: "TcpFlag", ...getColumnSearchProps("TcpFlag") },
+        { title: "Packet Length", dataIndex: "PacketLength",width: "15%", key: "PacketLength", ...getColumnSearchProps("PacketLength"), fixed: "bottom" },
     ];
 
     const handlePageChange = (page, pageSize) => {
-        setPagination({
-            current: page,
-            pageSize: pageSize,
-            total: pagination.total, // Preserve total
-        });
+        setPagination({ current: page, pageSize, total: pagination.total });
     };
 
     return (
@@ -211,7 +130,7 @@ export default function RecordTable() {
             <Table
                 columns={columns}
                 dataSource={data}
-                rowKey="key"
+                rowKey="ID"
                 pagination={{
                     current: pagination.current,
                     pageSize: pagination.pageSize,
@@ -219,7 +138,9 @@ export default function RecordTable() {
                     onChange: handlePageChange,
                     showSizeChanger: true,
                     showQuickJumper: true,
-                }} // Use Ant Design pagination
+                }}
+                scroll={{ x: "125%", y: 500 }}
+                sticky
             />
         </div>
     );
