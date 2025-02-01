@@ -38,14 +38,14 @@ func GetOSStates(interval time.Duration) {
 			continue
 		}
 
-		////输出总利用率
-		//fmt.Printf("Total CPU usage: %.2f%%\n", state.TotalCPUPercent)
-		//// 输出总内存利用率
-		//fmt.Printf("Total memory usage: %.2f%%\n", state.TotalMemPercent)
-		//
-		//// 输出 GPU 利用率
-		//fmt.Println("GPU Utilization:", state.TotalGPUPercent, "%")
-		//fmt.Println(state.PerCPUPercent)
+		// //输出总利用率
+		// fmt.Printf("Total CPU usage: %.2f%%\n", state.TotalCPUPercent)
+		// // 输出总内存利用率
+		// fmt.Printf("Total memory usage: %.2f%%\n", state.TotalMemPercent)
+		
+		// // 输出 GPU 利用率
+		// fmt.Println("GPU Utilization:", state.TotalGPUPercent, "%")
+		// fmt.Println(state.PerCPUPercent)
 	}
 }
 
