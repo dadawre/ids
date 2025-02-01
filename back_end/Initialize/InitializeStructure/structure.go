@@ -23,7 +23,7 @@ var ( //通用变量
 	MainBanIPSet              = Structure.NewBanIPSet(5 * 1000000) //封禁IP集合
 	WhiteList                 *List.AccessList                     //白名单
 	BlackList                 *List.AccessList                     //黑名单
-	LogSQLManager             *Structure.MySQLManager              //日志SQL驱动器
+	LogSQLManager             *Structure.RecordSQLManager          //日志SQL驱动器
 	MapVariableNameToVariable = map[string]interface{}{            // 配置变量键值对，用interface{}任意类型表示
 		"min_coroutine":     &Parameter.MinCoroutine,                 //最大数据包解析协程
 		"max_coroutine":     &Parameter.MaxCoroutine,                 //最少数据包解析协程
@@ -31,6 +31,22 @@ var ( //通用变量
 		"log_path":          &Parameter.LogPath,                      //日志文件夹路径
 		"alert_path":        &Parameter.AlertPath,                    //告警日志文件路径
 		"hardware_frequent": &Parameter.HardwareDataRefreshFrequency, //硬件数据刷新频率
+
+		"sql_user":         &Parameter.SqlUser,
+		"sql_password":     &Parameter.SqlPassword,
+		"sql_host":         &Parameter.SqlHost,
+		"sql_schema":       &Parameter.SqlSchemaName,
+		"sql_record_table": &Parameter.SqlRecordTableName,
+
+		"white_list_path": &Parameter.WhiteListPath, //白名单文件路径
+		"black_list_path": &Parameter.BlackListPath, //黑名单文件路径
+
+		"ids_mode": &Parameter.IdsMode, //ids模式
+		"ids_name": &Parameter.IdsName, //ids主机名
+		"ids_id":   &Parameter.IdsID,   //ids标识符
+
+		"account":  &Parameter.Account,  //账户
+		"password": &Parameter.Password, //密码
 
 		"mail_host":            &Parameter.SmtpHost,     //邮件服务器主机域名
 		"mail_port":            &Parameter.SmtpPort,     //邮件服务器主机端口
@@ -65,14 +81,5 @@ var ( //通用变量
 		"save_iptables_sh_path": &Parameter.SaveIptablesShPath,     //保存iptables配置到指定文件的脚本文件路径
 		"iptables_save_path":    &Parameter.IptablesConfigSavePath, //iptables配置文件路径
 
-		"white_list_path": &Parameter.WhiteListPath,
-		"black_list_path": &Parameter.BlackListPath,
-
-		"ids_mode": &Parameter.IdsMode, //ids模式
-		"ids_name": &Parameter.IdsName, //ids主机名
-		"ids_id":   &Parameter.IdsID,   //ids标识符
-
-		"account":  &Parameter.Account,  //账户
-		"password": &Parameter.Password, //密码
 	}
 )

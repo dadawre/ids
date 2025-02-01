@@ -2,9 +2,9 @@ package Network
 
 import (
 	"github.com/gorilla/mux"
+	"graduationDesign/back_end/Initialize/InitializeStructure"
 	"graduationDesign/back_end/Network/NetworkBanIP"
 	"graduationDesign/back_end/Network/NetworkConfig"
-	"graduationDesign/back_end/Network/NetworkRecord"
 	"graduationDesign/back_end/Network/NetworkRule"
 	"log"
 	"math/rand"
@@ -46,7 +46,7 @@ func NewStartWebRoute() *mux.Router {
 	router.HandleFunc("/RuleDelete", NetworkRule.RuleDelete)
 	router.HandleFunc("/RuleEdit", NetworkRule.RuleEdit)
 	router.HandleFunc("/RuleFetch", NetworkRule.RuleFetch)
-	router.HandleFunc("/logData", NetworkRecord.GetLogs).Methods("GET")
+	router.HandleFunc("/logData", InitializeStructure.LogSQLManager.GetLogs)
 	router.HandleFunc("/banIPData", NetworkBanIP.FetchBanIpData).Methods("GET")
 	router.HandleFunc("/DeleteBanIP", NetworkBanIP.DeleteBanIP)
 	router.HandleFunc("/AddBanIP", NetworkBanIP.AddBanIP)
