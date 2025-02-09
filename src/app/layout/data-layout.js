@@ -5,13 +5,15 @@ import {
     BarChartOutlined,
     UploadOutlined,
     UserOutlined,
-    AlignCenterOutlined
+    AlignCenterOutlined,
+    SnippetsOutlined
 } from '@ant-design/icons';
 import { Layout, Menu, theme } from 'antd';
 import ConfigTable from "@/app/component/configData/configTable";
 import RecordTable from "@/app/component/recordData/recordTable";
 import BanIPTable from "@/app/component/banIPData/banIPTable";
 import RuleTable from "@/app/component/ruleData/ruleTable";
+import WBTable from "@/app/component/wbData/wbTable"
 
 const menuConfig = [
     { label: '数据管理', href: '/dadawre' },
@@ -27,12 +29,13 @@ const topMenuItems = new Array(4).fill(null).map((_, index) => ({
 
 const { Header, Content, Footer, Sider } = Layout;
 
-const labels = ['配置数据', '规则数据', '配置封禁IP', '日志数据'];
+const labels = ['配置数据', '规则数据', '配置封禁IP', '日志数据','黑白名单'];
 const siderItems = [
     UserOutlined,
     AlignCenterOutlined,
     UploadOutlined,
     BarChartOutlined,
+    SnippetsOutlined,
 ].map((icon, index) => ({
     key: String(index + 1),
     icon: React.createElement(icon),
@@ -63,6 +66,8 @@ export default function MyLayout() {
                 return <BanIPTable key="banIPTable" />;
             case 4:
                 return <RecordTable key="recordTable" />;
+            case 5:
+                return <WBTable key="wbTable" />
             default:
                 return <ConfigTable />;
         }
@@ -93,7 +98,7 @@ export default function MyLayout() {
                     <Menu
                         theme="dark"
                         mode="horizontal"
-                        defaultSelectedKeys={['2']}
+                        defaultSelectedKeys={['1']}
                         style={{ flex: 1, minWidth: 0 }}
                     >
                         {topMenuItems.map((item) => (

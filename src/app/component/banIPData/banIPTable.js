@@ -113,13 +113,20 @@ export default function BanIPTable(){
             ...getColumnSearchProps('banRuleID'),
         },
         {
-            title: 'UnbanTime',
+            title: '封禁时长',
+            dataIndex: 'banPeriod',
+            key : 'banPeriod',
+            width: '15%',
+            ...getColumnSearchProps('banPeriod'),
+        },
+        {
+            title: '解禁时间',
             dataIndex: 'unbanTime',
             key : 'unbanTime',
             ...getColumnSearchProps('unbanTime'),
         },
         {
-            title: 'Describe',
+            title: '描述',
             dataIndex: 'describe',
             key: 'describe',
             width: '40%',
@@ -159,7 +166,8 @@ export default function BanIPTable(){
         const newValues = {
             ...values,
             banRuleID: parseInt(values.banRuleID, 10), // 转换为整数
-            unbanTime: parseInt(values.unbanTime, 10)
+            unbanTime: parseInt(values.unbanTime, 10),
+            banPeriod: parseInt(values.unbanTime,10)
         };
 
         // 确保转换成功（如果不是有效的数字，默认设置为 0）
@@ -168,6 +176,10 @@ export default function BanIPTable(){
         }
         // 确保转换成功（如果不是有效的数字，默认设置为 15）
         if (isNaN(newValues.unbanTime)) {
+            newValues.unbanTime = 15;
+        }
+        // 确保转换成功（如果不是有效的数字，默认设置为 15）
+        if (isNaN(newValues.banPeriod)) {
             newValues.unbanTime = 15;
         }
 
@@ -248,7 +260,7 @@ export default function BanIPTable(){
                         <Input />
                     </Form.Item>
                     <Form.Item
-                        label="解禁时间"
+                        label="封禁时长"
                         name="unbanTime"
                         rules={[{ required: true, message: 'Please input the BanTime!' }]}
                     >

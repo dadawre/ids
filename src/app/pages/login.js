@@ -13,7 +13,7 @@ export default function MyLogin() {
         console.log("Success:", values);
         setLoading(true);
         try {
-            const response = await fetch("http://192.168.31.36:8080/login", {
+            const response = await fetch("http://localhost:8080/login", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
