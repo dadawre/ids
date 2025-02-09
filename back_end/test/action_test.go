@@ -14,9 +14,9 @@ func TestSendMail(t *testing.T) {
 	mail = mail.SetSmtpHost("smtp.qq.com").SetSmtpPort("587").SetToEmail("2939188260@qq.com")
 	mail = mail.SetAuthEmail("112724772@qq.com").SetAuthPassword("bcernpppsoejbifi")
 	mail = mail.SetSubject("Subject: 测试邮件\n").SetBody(`这是通过Go语言发送的测试邮件。<br><a href="http://192.168.190.42/pikachu/vul/xss/xss_stored.php">点击这里访问链接</a>`)
-	err := mail.SendMail()
-	if err != nil {
-		err.Error()
+	mail.StartTimer(5000000000)
+	for true {
+
 	}
 }
 

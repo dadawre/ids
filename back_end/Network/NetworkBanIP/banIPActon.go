@@ -29,7 +29,7 @@ func AddBanIP(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(newBanIP)
 
 	// 如果结构体的字段类型转换不成功（例如 banRuleID 从字符串转换为 int 失败）
-	if newBanIP.BanIP == "" {
+	if newBanIP.BanIP == "" || newBanIP.BanPeriod == 0 {
 		http.Error(w, "Invalid BanRuleID format", http.StatusBadRequest)
 		return
 	}

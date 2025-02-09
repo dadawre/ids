@@ -7,6 +7,8 @@ var ( //配置键值对，默认值
 	LogPath                      = "./log"
 	AlertPath                    = "./log/alert.log"
 	HardwareDataRefreshFrequency = 500
+	IPBanAllowedDiff             = 5
+	EmailSendInterval            = 5 * 1000 * 1000 * 1000 * 60
 
 	SqlUser                = "root"
 	SqlPassword            = "root"
@@ -14,6 +16,20 @@ var ( //配置键值对，默认值
 	SqlSchemaName          = "IDSdata"
 	SqlRecordTableName     = "ActionDescribeTriggerLog"
 	SqlRecordTableFullName string
+
+	WhiteListPath     string
+	BlackListPath     string
+	BlackPortListPath string
+
+	SaveIptablesShPath     string
+	IptablesConfigSavePath string
+
+	IdsMode = 1
+	IdsName = "node1"
+	IdsID   = 1
+
+	Account  = "a"
+	Password = "12345"
 
 	SmtpHost     string
 	SmtpPort     int
@@ -45,16 +61,9 @@ var ( //配置键值对，默认值
 	SaveWhiteListNetworkShPath    string
 	WhiteListNetworkSavePath      string
 
-	WhiteListPath string
-	BlackListPath string
-
-	SaveIptablesShPath     string
-	IptablesConfigSavePath string
-
-	IdsMode = 1
-	IdsName = "node1"
-	IdsID   = 1
-
-	Account  = "a"
-	Password = "12345"
+	InitBanPortShPath      string
+	AddPortToBanShPath     string
+	DeleteBanPortFromBanSh string
+	SaveBanPortShPath      string
+	BanPortSavePath        string
 )

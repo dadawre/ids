@@ -33,7 +33,7 @@ func AddWhiteIPv4(IPAddr string) error {
 	return nil
 }
 
-func DeleteIPv4Network(IPNetworkAddr string) error {
+func DeleteWhiteIPv4Network(IPNetworkAddr string) error {
 	cmd := exec.Command("/bin/bash", Parameter.DeleteWhiteIpNetworkSh, IPNetworkAddr)
 	output, err := cmd.CombinedOutput()
 	if err != nil {

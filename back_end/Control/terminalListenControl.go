@@ -38,6 +38,10 @@ func listenInput() {
 			continue
 		}
 
+		if input == "" {
+			continue
+		}
+
 		// 移除输入中的换行符
 		input = input[:len(input)-1]
 		if input == "exit" {

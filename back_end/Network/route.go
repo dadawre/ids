@@ -4,6 +4,7 @@ import (
 	"github.com/gorilla/mux"
 	"graduationDesign/back_end/Initialize/InitializeStructure"
 	"graduationDesign/back_end/Network/NetworkBanIP"
+	"graduationDesign/back_end/Network/NetworkBlackAndWhiteList"
 	"graduationDesign/back_end/Network/NetworkConfig"
 	"graduationDesign/back_end/Network/NetworkRule"
 	"log"
@@ -50,6 +51,10 @@ func NewStartWebRoute() *mux.Router {
 	router.HandleFunc("/banIPData", NetworkBanIP.FetchBanIpData).Methods("GET")
 	router.HandleFunc("/DeleteBanIP", NetworkBanIP.DeleteBanIP)
 	router.HandleFunc("/AddBanIP", NetworkBanIP.AddBanIP)
+
+	router.HandleFunc("/AddWBData", NetworkBlackAndWhiteList.AddHandler)
+	router.HandleFunc("/DeleteWBData", NetworkBlackAndWhiteList.DeleteHandler)
+	router.HandleFunc("/QueryWBData", NetworkBlackAndWhiteList.QueryHandler)
 
 	router.HandleFunc("/protected", authMiddleware(protectedHandler)) // 使用中间件保护路由
 	// Apply the CORS middleware

@@ -5,6 +5,7 @@ import (
 	"graduationDesign/back_end/Initialize/Parameter"
 	"net"
 	"os/exec"
+	"strconv"
 	"strings"
 )
 
@@ -12,14 +13,20 @@ import (
 type IPType int
 
 const (
-	Invalid  IPType = iota // 无效格式
-	IPv4Addr               // IPv4地址
-	IPv6Addr               // IPv6地址
-	IPv4Net                // IPv4网段
-	IPv6Net                // IPv6网段
+	Invalid      IPType = iota // 无效格式
+	IPv4AddrType               // IPv4地址
+	IPv6AddrType               // IPv6地址
+	IPv4NetType                // IPv4网段
+	IPv6NetType                // IPv6网段
+	PortType
 )
 
+// CheckIPType 查看字符串类型
 func CheckIPType(s string) IPType {
+	if _, err := strconv.Atoi(s); err == nil {
+		return PortType
+	}
+
 	// 尝试解析为CIDR格式
 	if ip, ipNet, err := net.ParseCIDR(s); err == nil {
 		// 验证CIDR有效性
@@ -27,13 +34,13 @@ func CheckIPType(s string) IPType {
 			if ones, _ := ipNet.Mask.Size(); ones > 32 {
 				return Invalid
 			}
-			return IPv4Net
+			return IPv4NetType
 		}
 		if strings.Contains(ip.String(), ":") {
 			if ones, _ := ipNet.Mask.Size(); ones > 128 {
 				return Invalid
 			}
-			return IPv6Net
+			return IPv6NetType
 		}
 		return Invalid
 	}
@@ -46,41 +53,9 @@ func CheckIPType(s string) IPType {
 
 	// 判断IP版本
 	if ip.To4() != nil {
-		return IPv4Addr
+		return IPv4AddrType
 	}
-	return IPv6Addr
-}
-
-// DropMacPackets uses iptables to drop packets based on source MAC, destination MAC, length, and type
-func DropMacPackets(srcMAC, dstMAC, length, packetType string) error {
-	cmd := "sudo iptables -A INPUT"
-
-	// Add source MAC match if provided
-	if srcMAC != "" {
-		cmd += fmt.Sprintf(" -m mac --mac-source %s", srcMAC)
-	}
-
-	// Add destination MAC match if provided
-	if dstMAC != "" {
-		cmd += fmt.Sprintf(" -m mac --mac-destination %s", dstMAC)
-	}
-
-	// Add packet length match if provided
-	if length != "" {
-		cmd += fmt.Sprintf(" -m length --length %s", length)
-	}
-
-	// Add packet type match if provided
-	if packetType != "" {
-		cmd += fmt.Sprintf(" -p %s", packetType)
-	}
-
-	// Add the rule to drop the packet
-	cmd += " -j DROP"
-
-	// Execute the iptables command
-	fmt.Println("Executing command:", cmd) // Print the command for debugging purposes
-	return exec.Command("bash", "-c", cmd).Run()
+	return IPv6AddrType
 }
 
 func DropIPv4Network(IPNetworkAddr ...string) error {

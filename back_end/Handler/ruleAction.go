@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"github.com/google/gopacket/layers"
 	"graduationDesign/back_end/Action"
+	"graduationDesign/back_end/DB"
 	"graduationDesign/back_end/Initialize/InitializeStructure"
 	"graduationDesign/back_end/Initialize/Parameter"
 	"graduationDesign/back_end/Structure"
+	"net"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -37,9 +40,17 @@ func (p *PacketHandler) GetSrcAndDstAddrString() (string, string) {
 	case layers.LayerTypeIPv4:
 		return p.ipv4.SrcIP.String(), p.ipv4.DstIP.String()
 	case layers.LayerTypeIPv6:
-		return p.ipv6.SrcIP.String(), p.ipv6.DstIP.String() // 修复IPv6目标地址错误
+		return p.ipv6.SrcIP.String(), p.ipv6.DstIP.String()
 	case layers.LayerTypeARP:
-		return string(p.arp.SourceProtAddress), string(p.arp.DstProtAddress)
+		// 关键修复：将字节切片转换为 net.IP 再转为字符串
+		srcIP := net.IP(p.arp.SourceProtAddress)
+		dstIP := net.IP(p.arp.DstProtAddress)
+		if len(srcIP) > 0 && len(dstIP) > 0 {
+			return srcIP.String(), dstIP.String()
+		}
+		srcHw := net.HardwareAddr(p.arp.SourceHwAddress).String()
+		dstHw := net.HardwareAddr(p.arp.DstHwAddress).String()
+		return srcHw, dstHw
 	case layers.LayerTypeEthernet:
 		src := strings.Replace(p.eth.SrcMAC.String(), ":", "..", -1)
 		dst := strings.Replace(p.eth.DstMAC.String(), ":", "..", -1)
@@ -85,7 +96,7 @@ func (p *PacketHandler) GetTopProtocol() string {
 	return p.decoded[len(p.decoded)-1].String()
 }
 
-func (p *PacketHandler) ConductionActionLog(rule *Structure.RuleNodeValue) (*Structure.ActionDescribeTriggerLog, string) {
+func (p *PacketHandler) ConductionActionLog(rule *Structure.RuleNodeValue) (*DB.ActionDescribeTriggerLog, string) {
 	writeContent := p.parseMsgStringToValue(rule)
 	dataString := time.Now().Format(time.RFC3339)
 	contentString := fmt.Sprintf("时间: %s\n%s", dataString, *writeContent)
@@ -93,7 +104,7 @@ func (p *PacketHandler) ConductionActionLog(rule *Structure.RuleNodeValue) (*Str
 	srcIP, dstIP := p.GetSrcAndDstAddrString()
 	srcPort, dstPort := p.GetSrcAndDstPortAddrString()
 
-	return &Structure.ActionDescribeTriggerLog{
+	return &DB.ActionDescribeTriggerLog{
 		SrcIPAddr:       srcIP,
 		DstIPAddr:       dstIP,
 		SrcPortAddr:     srcPort,
@@ -113,8 +124,8 @@ func (p *PacketHandler) defaultPass() {
 	incrementPacketCount()
 }
 
-func (p *PacketHandler) logAndIncrement(log *Structure.ActionDescribeTriggerLog) {
-	go func(l *Structure.ActionDescribeTriggerLog) {
+func (p *PacketHandler) logAndIncrement(log *DB.ActionDescribeTriggerLog) {
+	go func(l *DB.ActionDescribeTriggerLog) {
 		if err := InitializeStructure.LogSQLManager.InsertRecord(Parameter.SqlRecordTableFullName, l); err != nil {
 			fmt.Printf("数据库插入错误: %v\n", err)
 		}
@@ -131,7 +142,7 @@ func (p *PacketHandler) PassPacket(rule *Structure.RuleNodeValue) error {
 func (p *PacketHandler) RecordPacket(rule *Structure.RuleNodeValue) error {
 	log, content := p.ConductionActionLog(rule)
 
-	go func(c string, l *Structure.ActionDescribeTriggerLog) {
+	go func(c string, l *DB.ActionDescribeTriggerLog) {
 		folder := filepath.Join(Parameter.LogPath, l.SrcIPAddr)
 		if err := CreateFile(folder); err != nil {
 			fmt.Printf("创建目录失败: %v\n", err)
@@ -152,7 +163,7 @@ func (p *PacketHandler) RecordPacket(rule *Structure.RuleNodeValue) error {
 func (p *PacketHandler) AlertPacket(rule *Structure.RuleNodeValue) error {
 	log, content := p.ConductionActionLog(rule)
 
-	go func(c string, l *Structure.ActionDescribeTriggerLog) {
+	go func(c string, l *DB.ActionDescribeTriggerLog) {
 		if err := AppendWriteFile(Parameter.AlertPath, "\n"+c); err != nil {
 			fmt.Printf("告警文件写入失败: %v\n", err)
 		}
@@ -166,16 +177,13 @@ func (p *PacketHandler) AlertPacket(rule *Structure.RuleNodeValue) error {
 func (p *PacketHandler) SendPacket(rule *Structure.RuleNodeValue) error {
 	log, content := p.ConductionActionLog(rule)
 
-	go func(c string, l *Structure.ActionDescribeTriggerLog) {
+	go func(c string, l *DB.ActionDescribeTriggerLog) {
 		if err := AppendWriteFile(Parameter.AlertPath, "\n"+c); err != nil {
 			fmt.Printf("告警文件写入失败: %v\n", err)
 		}
 
-		InitializeStructure.Mail.SetSubject(fmt.Sprintf("IDS告警 - ID:%d 名称:%s", Parameter.IdsID, Parameter.IdsName))
-		InitializeStructure.Mail.SetBody(c)
-		if err := InitializeStructure.Mail.SendMail(); err != nil {
-			fmt.Printf("邮件发送失败: %v\n", err)
-		}
+		InitializeStructure.Mail.AddStringEvent(content)
+
 		p.logAndIncrement(l)
 		fmt.Println("Sending packet")
 	}(content, log)
@@ -186,13 +194,19 @@ func (p *PacketHandler) SendPacket(rule *Structure.RuleNodeValue) error {
 func (p *PacketHandler) DropIPv4Packets(rule *Structure.RuleNodeValue) error {
 	log, content := p.ConductionActionLog(rule)
 
-	go func(c string, l *Structure.ActionDescribeTriggerLog) {
+	go func(c string, l *DB.ActionDescribeTriggerLog) {
 		if err := AppendWriteFile(Parameter.AlertPath, "\n"+c); err != nil {
 			fmt.Printf("告警文件写入失败: %v\n", err)
 		}
 
-		if err := Action.DropIP(l.SrcIPAddr); err != nil {
-			fmt.Println(err)
+		if rule.Option.BanTime > 0 {
+			if err := Action.DropIP(l.SrcIPAddr, strconv.Itoa(rule.Option.BanTime*60)); err != nil {
+				fmt.Println(err)
+			}
+		} else {
+			if err := Action.DropIP(l.SrcIPAddr, "900"); err != nil {
+				fmt.Println(err)
+			}
 		}
 
 		InitializeStructure.MainBanIPSet.Insert(Structure.BanIPDescribe{

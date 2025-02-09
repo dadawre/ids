@@ -1,4 +1,4 @@
-package Structure
+package DB
 
 import (
 	"encoding/json"
@@ -156,6 +156,7 @@ func (m *RecordSQLManager) QueryWithPagination(tableName string, params QueryPar
 	return results, count, nil
 }
 
+// 前端接收键转SQL键
 var sqlColumnsMap = map[string]string{
 	"id":               "ID",
 	"src_ip_addr":      "SrcIPAddr",

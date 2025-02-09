@@ -1,11 +1,13 @@
 package InitializeStructure
 
 import (
+	"graduationDesign/back_end/DB"
 	"graduationDesign/back_end/Initialize/Parameter"
 	"graduationDesign/back_end/List"
 	"graduationDesign/back_end/Parser/ParserConfig"
 	"graduationDesign/back_end/Parser/ParserRuler"
 	"graduationDesign/back_end/Structure"
+	"time"
 )
 
 var ( //通用变量
@@ -20,17 +22,18 @@ var ( //通用变量
 	ArrayRuleStrings     []Structure.RuleNodeStringValue    //规则字符串结构体数组
 	Mail                 = &Structure.MailSetting{}         //邮箱结构体
 	//ActionDescribeTriggerLogArray = make([]Structure.ActionDescribeTriggerLog, 0) //Action执行日志
-	MainBanIPSet              = Structure.NewBanIPSet(5 * 1000000) //封禁IP集合
-	WhiteList                 *List.AccessList                     //白名单
-	BlackList                 *List.AccessList                     //黑名单
-	LogSQLManager             *Structure.RecordSQLManager          //日志SQL驱动器
-	MapVariableNameToVariable = map[string]interface{}{            // 配置变量键值对，用interface{}任意类型表示
-		"min_coroutine":     &Parameter.MinCoroutine,                 //最大数据包解析协程
-		"max_coroutine":     &Parameter.MaxCoroutine,                 //最少数据包解析协程
-		"config_path":       &Parameter.ConfigPath,                   //配置文件路径
-		"log_path":          &Parameter.LogPath,                      //日志文件夹路径
-		"alert_path":        &Parameter.AlertPath,                    //告警日志文件路径
-		"hardware_frequent": &Parameter.HardwareDataRefreshFrequency, //硬件数据刷新频率
+	MainBanIPSet              = Structure.NewBanIPSet(time.Duration(Parameter.IPBanAllowedDiff * 1000000))     //封禁IP集合
+	BlackWhiteList            = &List.AccessList{Addrs: make(map[string]List.WBValueStructure, 0), IDindex: 0} //黑白名单
+	LogSQLManager             *DB.RecordSQLManager                                                             //日志SQL驱动器
+	MapVariableNameToVariable = map[string]interface{}{                                                        // 配置变量键值对，用interface{}任意类型表示
+		"min_coroutine":       &Parameter.MinCoroutine,                 //最大数据包解析协程
+		"max_coroutine":       &Parameter.MaxCoroutine,                 //最少数据包解析协程
+		"config_path":         &Parameter.ConfigPath,                   //配置文件路径
+		"log_path":            &Parameter.LogPath,                      //日志文件夹路径
+		"alert_path":          &Parameter.AlertPath,                    //告警日志文件路径
+		"hardware_frequent":   &Parameter.HardwareDataRefreshFrequency, //硬件数据刷新频率
+		"ban_allowed_diff":    &Parameter.IPBanAllowedDiff,             //解禁ip允许时间误差
+		"email_send_interval": &Parameter.EmailSendInterval,            //短信发送间隔
 
 		"sql_user":         &Parameter.SqlUser,
 		"sql_password":     &Parameter.SqlPassword,
@@ -38,8 +41,9 @@ var ( //通用变量
 		"sql_schema":       &Parameter.SqlSchemaName,
 		"sql_record_table": &Parameter.SqlRecordTableName,
 
-		"white_list_path": &Parameter.WhiteListPath, //白名单文件路径
-		"black_list_path": &Parameter.BlackListPath, //黑名单文件路径
+		"white_list_path":      &Parameter.WhiteListPath,     //白名单文件路径
+		"black_list_path":      &Parameter.BlackListPath,     //黑名单文件路径
+		"port_black_list_path": &Parameter.BlackPortListPath, //端口黑名单
 
 		"ids_mode": &Parameter.IdsMode, //ids模式
 		"ids_name": &Parameter.IdsName, //ids主机名
@@ -77,6 +81,12 @@ var ( //通用变量
 		"delete_white_ip_network_sh":           &Parameter.DeleteWhiteIpNetworkSh,
 		"save_white_list_network_sh_path":      &Parameter.SaveWhiteListNetworkShPath,
 		"white_list_network_save_path":         &Parameter.WhiteListNetworkSavePath,
+
+		"init_ban_port_sh_path":       &Parameter.InitBanPortShPath,
+		"add_port_to_ban_sh_path":     &Parameter.AddPortToBanShPath,
+		"ban_port_delete_from_ban_sh": &Parameter.DeleteBanPortFromBanSh,
+		"save_ban_port_sh_path":       &Parameter.SaveBanPortShPath,
+		"ban_port_save_path":          &Parameter.BanPortSavePath,
 
 		"save_iptables_sh_path": &Parameter.SaveIptablesShPath,     //保存iptables配置到指定文件的脚本文件路径
 		"iptables_save_path":    &Parameter.IptablesConfigSavePath, //iptables配置文件路径

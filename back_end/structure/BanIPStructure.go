@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"graduationDesign/back_end/Action"
 	"log"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -13,7 +14,8 @@ type BanIPDescribe struct {
 	BanIP     string    `json:"banIP"`
 	BanRuleID int       `json:"banRuleID"`
 	Describe  string    `json:"describe"`
-	UnbanTime time.Time `json:"unbanTime"` // 新增解封时间字段
+	UnbanTime time.Time `json:"unbanTime"` // 解封时间字段
+	BanPeriod int       `json:"banPeriod"` //封禁时长
 }
 
 // BanIPSet 使用哈希表存储 BanIP 描述信息
@@ -24,6 +26,7 @@ type BanIPSet struct {
 	allowedDiff time.Duration             // 允许的时间误差
 }
 
+// 定时器结构体
 type timerGroup struct {
 	ips   []string
 	timer *time.Timer
@@ -81,10 +84,10 @@ func (set *BanIPSet) Insert(banIPDesc BanIPDescribe) bool {
 	//从IPset中插入
 	IPType := Action.CheckIPType(banIPDesc.BanIP)
 	var err error
-	if IPType == Action.IPv4Addr {
-		err = Action.DropIP(banIPDesc.BanIP)
-	} else if IPType == Action.IPv4Net {
-		err = Action.DropIPv4Network(banIPDesc.BanIP)
+	if IPType == Action.IPv4AddrType {
+		err = Action.DropIP(banIPDesc.BanIP, strconv.Itoa(banIPDesc.BanPeriod*60))
+	} else if IPType == Action.IPv4NetType {
+		err = Action.DropIPv4Network(banIPDesc.BanIP, strconv.Itoa(banIPDesc.BanPeriod*60))
 	}
 
 	if err != nil {
@@ -112,9 +115,9 @@ func (set *BanIPSet) Delete(banIP string) bool {
 		//从IPset中删除
 		IPType := Action.CheckIPType(banIP)
 		var err error
-		if IPType == Action.IPv4Addr {
+		if IPType == Action.IPv4AddrType {
 			err = Action.UnbanIPv4(banIP)
-		} else if IPType == Action.IPv4Net {
+		} else if IPType == Action.IPv4NetType {
 			err = Action.UnbanIPv4Network(banIP)
 		}
 
@@ -151,9 +154,9 @@ func (set *BanIPSet) unbanIPs(baseTime time.Time) {
 		for _, ip := range group.ips {
 			IPType := Action.CheckIPType(ip)
 			var err error
-			if IPType == Action.IPv4Addr {
+			if IPType == Action.IPv4AddrType {
 				err = Action.UnbanIPv4(ip)
-			} else if IPType == Action.IPv4Net {
+			} else if IPType == Action.IPv4NetType {
 				err = Action.UnbanIPv4Network(ip)
 			}
 			delete(set.Data, ip)

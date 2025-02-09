@@ -6,30 +6,48 @@ import (
 	"graduationDesign/back_end/Action"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 )
 
 type AccessList struct {
-	Ips map[string]bool // 存储IP
+	IDindex int                         // Used to assign a unique ID; only increases.
+	Addrs   map[string]WBValueStructure // Stores entries using the address as key.
 }
 
-type ListType int
+type WBValueStructure struct {
+	ID        int        `json:"id"`
+	Addr      string     `json:"addr"`      // Address string
+	IsWhite   bool       `json:"isWhite"`   // Whether it is white-listed
+	ValueType WBAddrType `json:"valueType"` // Address type
+}
+
+type WBAddrType int
 
 const (
-	BlackListType ListType = iota
-	WhiteListType
+	BlackIPv4Type WBAddrType = iota
+	WhiteIPv4Type
+	BlackIPv4NetworkType
+	WhiteIPv4NetworkType
+	BlackPortType
 )
 
 // LoadAccessList 加载访问列表文件
-func LoadAccessList(filename string, insertType ListType) (*AccessList, error) {
+func LoadAccessList(filename string, isWhite bool, AppendList *AccessList) (*AccessList, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	al := &AccessList{
-		Ips: make(map[string]bool),
+	var al *AccessList
+	if AppendList == nil {
+		al = &AccessList{
+			Addrs:   make(map[string]WBValueStructure),
+			IDindex: 0,
+		}
+	} else {
+		al = AppendList
 	}
 
 	scanner := bufio.NewScanner(file)
@@ -39,17 +57,53 @@ func LoadAccessList(filename string, insertType ListType) (*AccessList, error) {
 			continue
 		}
 
+		var WBValue WBValueStructure
+		WBValue.IsWhite = isWhite
+
 		// 尝试解析CIDR格式
 		if _, cidr, err := net.ParseCIDR(line); err == nil {
-			_ = InsertIPset(cidr.String(), 1, insertType)
-			al.Ips[cidr.String()] = true
+			if isWhite == true {
+				_ = InsertIPset(cidr.String(), WhiteIPv4NetworkType)
+				WBValue.ValueType = WhiteIPv4NetworkType
+			} else {
+				_ = InsertIPset(cidr.String(), BlackIPv4NetworkType)
+				WBValue.ValueType = BlackIPv4NetworkType
+			}
+			WBValue.Addr = cidr.String()
+			WBValue.IsWhite = isWhite
+			WBValue.ID = al.IDindex
+			al.Addrs[cidr.String()] = WBValue
+			al.IDindex++
 			continue
 		}
 
 		// 尝试解析普通IP格式
 		if ip := net.ParseIP(line); ip != nil {
-			_ = InsertIPset(ip.String(), 0, insertType)
-			al.Ips[ip.String()] = true
+			if isWhite == true {
+				_ = InsertIPset(ip.String(), WhiteIPv4Type)
+				WBValue.ValueType = WhiteIPv4Type
+			} else {
+				_ = InsertIPset(ip.String(), BlackIPv4Type)
+				WBValue.ValueType = BlackIPv4Type
+			}
+			WBValue.Addr = ip.String()
+			WBValue.IsWhite = isWhite
+			WBValue.ID = al.IDindex
+			al.Addrs[ip.String()] = WBValue
+			al.IDindex++
+			continue
+		}
+
+		//解析port格式
+		if port, err := strconv.Atoi(line); err == nil && port > 0 && port < 65536 {
+			portStr := strconv.Itoa(port)
+			WBValue.Addr = portStr
+			WBValue.IsWhite = isWhite
+			WBValue.ValueType = BlackPortType
+			WBValue.ID = al.IDindex
+			al.Addrs[portStr] = WBValue
+			al.IDindex++
+			_ = InsertIPset(portStr, BlackPortType)
 			continue
 		}
 
@@ -60,32 +114,36 @@ func LoadAccessList(filename string, insertType ListType) (*AccessList, error) {
 	return al, scanner.Err()
 }
 
-func InsertIPset(insertIP string, IPType int, insertType ListType) error {
-	if insertType == 0 { //黑名单
-		if IPType == 0 {
-			err := Action.DropIP(insertIP)
-			if err != nil {
-				return err
-			}
-		} else if IPType == 1 {
-			err := Action.DropIPv4Network(insertIP)
-			if err != nil {
-				return err
-			}
-		}
-	} else if insertType == 1 { //白名单
-		if IPType == 0 {
-			err := Action.AddWhiteIPv4(insertIP)
-			if err != nil {
-				return err
-			}
-		} else if IPType == 1 {
-			err := Action.AddWhiteIpv4Network(insertIP)
-			if err != nil {
-				return err
-			}
-		}
+func InsertIPset(insertAddr string, insertType WBAddrType) error {
+	var err error = nil
+	if insertType == BlackIPv4Type { //黑名单
+		err = Action.DropIP(insertAddr)
+	} else if insertType == WhiteIPv4Type { //白名单
+		err = Action.AddWhiteIPv4(insertAddr)
+	} else if insertType == BlackPortType {
+		err = Action.AddBlackPort(insertAddr)
+	} else if insertType == BlackIPv4NetworkType {
+		err = Action.DropIPv4Network(insertAddr)
+	} else if insertType == WhiteIPv4NetworkType {
+		err = Action.AddWhiteIpv4Network(insertAddr)
 	}
 
-	return nil
+	return err
+}
+
+func DeleteIPset(insertAddr string, insertType WBAddrType) error {
+	var err error = nil
+	if insertType == BlackIPv4Type { //黑名单
+		err = Action.UnbanIPv4(insertAddr)
+	} else if insertType == WhiteIPv4Type { //白名单
+		err = Action.DeleteWhiteIPv4(insertAddr)
+	} else if insertType == BlackPortType {
+		err = Action.DeleteBlackPort(insertAddr)
+	} else if insertType == BlackIPv4NetworkType {
+		err = Action.UnbanIPv4Network(insertAddr)
+	} else if insertType == WhiteIPv4NetworkType {
+		err = Action.DeleteWhiteIPv4Network(insertAddr)
+	}
+
+	return err
 }
