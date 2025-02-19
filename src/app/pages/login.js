@@ -32,7 +32,7 @@ export default function MyLogin() {
                 // 登录成功，跳转到目标页面
                 // message.success("Login successful!");
                 // messageApi.info("Login successful!");
-                window.location.href = "http://192.168.56.1:3000/data-show";
+                window.location.href = "http://127.0.0.1:3000/data-show";
             } else {
                 // 登录失败，显示错误消息
                 messageApi.info(result.message || "Username or password is incorrect");
