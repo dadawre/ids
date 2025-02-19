@@ -81,9 +81,9 @@ func DropIP(IPAddr ...string) error {
 	// 通过 exec.Command 执行 Shell 脚本,向ip_ban集合中插入封禁IP
 	var cmd *exec.Cmd
 	if len(IPAddr) == 1 {
-		cmd = exec.Command("/bin/bash", Parameter.AddIpNetworkToBanShPath, IPAddr[0])
+		cmd = exec.Command("/bin/bash", Parameter.AddIpToBanShPath, IPAddr[0])
 	} else if len(IPAddr) >= 2 {
-		cmd = exec.Command("/bin/bash", Parameter.AddIpNetworkToBanShPath, IPAddr[0], IPAddr[1])
+		cmd = exec.Command("/bin/bash", Parameter.AddIpToBanShPath, IPAddr[0], IPAddr[1])
 	}
 
 	output, err := cmd.CombinedOutput()

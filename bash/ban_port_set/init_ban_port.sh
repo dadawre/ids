@@ -3,7 +3,7 @@
 # 检查是否存在名为 ban_port 的 ipset 集合
 if ! ipset list ban_port &>/dev/null; then
     echo "创建 ipset 集合 ban_port..."
-    ipset create ban_port hash:port
+    ipset create ban_port bitmap:port range  0 to 65535 
 else
     echo "ipset 集合 ban_port 已存在."
 fi

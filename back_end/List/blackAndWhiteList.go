@@ -34,6 +34,7 @@ const (
 
 // LoadAccessList 加载访问列表文件
 func LoadAccessList(filename string, isWhite bool, AppendList *AccessList) (*AccessList, error) {
+	fmt.Printf(filename)
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err

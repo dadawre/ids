@@ -9,6 +9,14 @@ var ( //配置键值对，默认值
 	HardwareDataRefreshFrequency = 500
 	IPBanAllowedDiff             = 5
 	EmailSendInterval            = 5 * 1000 * 1000 * 1000 * 60
+	StartProxy                   = 1
+
+	HttpWhiteList = "./conf/http_white_black_list/whitelist"
+	HttpBlackList = "./conf/http_white_black_list/blacklist"
+	HttpLog       = "./log/http_black_white.log"
+
+	HttpsCert       = "./conf/https_key/cert.pem"
+	HttpsPrivateKey = "./conf/https_key/key.unencrypted.pem"
 
 	SqlUser                = "root"
 	SqlPassword            = "root"

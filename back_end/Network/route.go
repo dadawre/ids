@@ -58,7 +58,7 @@ func NewStartWebRoute() *mux.Router {
 
 	router.HandleFunc("/protected", authMiddleware(protectedHandler)) // 使用中间件保护路由
 	// Apply the CORS middleware
-	log.Println("Server running on http://localhost:8080")
+	log.Println("前端API地址 http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", CorsMiddleware(router)))
 	return router
 }

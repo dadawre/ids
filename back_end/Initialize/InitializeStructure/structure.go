@@ -34,12 +34,20 @@ var ( //通用变量
 		"hardware_frequent":   &Parameter.HardwareDataRefreshFrequency, //硬件数据刷新频率
 		"ban_allowed_diff":    &Parameter.IPBanAllowedDiff,             //解禁ip允许时间误差
 		"email_send_interval": &Parameter.EmailSendInterval,            //短信发送间隔
+		"start_proxy":         &Parameter.StartProxy,                   //是否启动代理
 
-		"sql_user":         &Parameter.SqlUser,
-		"sql_password":     &Parameter.SqlPassword,
-		"sql_host":         &Parameter.SqlHost,
-		"sql_schema":       &Parameter.SqlSchemaName,
-		"sql_record_table": &Parameter.SqlRecordTableName,
+		"http_white_list": &Parameter.HttpWhiteList, //http白名单
+		"http_black_list": &Parameter.HttpBlackList, //http白名单
+		"http_log":        &Parameter.HttpLog,       //http日志
+
+		"https_cert":        &Parameter.HttpsCert,       // http公钥证书
+		"https_private_key": &Parameter.HttpsPrivateKey, //http私钥
+
+		"sql_user":         &Parameter.SqlUser,            //sql用户名
+		"sql_password":     &Parameter.SqlPassword,        // sql密码
+		"sql_host":         &Parameter.SqlHost,            //sql主机地址
+		"sql_schema":       &Parameter.SqlSchemaName,      //sql框架
+		"sql_record_table": &Parameter.SqlRecordTableName, //sql日志表
 
 		"white_list_path":      &Parameter.WhiteListPath,     //白名单文件路径
 		"black_list_path":      &Parameter.BlackListPath,     //黑名单文件路径

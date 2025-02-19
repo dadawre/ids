@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"github.com/elazarl/goproxy"
+	"graduationDesign/back_end/Initialize/Parameter"
 	"io"
 	"log"
 	"net/http"
@@ -49,11 +50,25 @@ func loadRegexList(filename string) ([]*regexp.Regexp, error) {
 	return regexes, nil
 }
 
+// checkHeaders 检查 HTTP 头部字段是否匹配黑白名单
+func checkHeaders(headers http.Header, regexes []*regexp.Regexp) bool {
+	for _, re := range regexes {
+		for key, values := range headers {
+			for _, value := range values {
+				if re.MatchString(key) || re.MatchString(value) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 func StartProxy() {
 	// --------------------------
 	// 初始化黑白名单日志记录器
 	// --------------------------
-	logFile, err := os.OpenFile("black_white_log.txt", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	logFile, err := os.OpenFile(Parameter.HttpLog, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		log.Fatalf("打开日志文件失败: %v", err)
 	}
@@ -64,11 +79,11 @@ func StartProxy() {
 	// --------------------------
 	// 加载黑名单和白名单正则表达式
 	// --------------------------
-	blackListRegexes, err = loadRegexList("blacklist.txt")
+	blackListRegexes, err = loadRegexList(Parameter.HttpWhiteList)
 	if err != nil {
 		log.Fatalf("加载黑名单失败: %v", err)
 	}
-	whiteListRegexes, err = loadRegexList("whitelist.txt")
+	whiteListRegexes, err = loadRegexList(Parameter.HttpBlackList)
 	if err != nil {
 		log.Fatalf("加载白名单失败: %v", err)
 	}
@@ -77,9 +92,9 @@ func StartProxy() {
 	// 加载自定义 CA 证书和解密私钥
 	// --------------------------
 	//证书
-	caCertFile := "cert.pem"
+	caCertFile := Parameter.HttpsCert
 	//未加密私钥
-	caKeyFile := "key.unencrypted.pem"
+	caKeyFile := Parameter.HttpsPrivateKey
 
 	ca, err := tls.LoadX509KeyPair(caCertFile, caKeyFile)
 	if err != nil {
@@ -109,17 +124,29 @@ func StartProxy() {
 			req.Body = io.NopCloser(bytes.NewBuffer([]byte(payload)))
 		}
 
+		// 检查请求头部是否匹配白名单
+		if checkHeaders(req.Header, whiteListRegexes) {
+			bwLogger.Printf("白名单匹配（请求头）: %s %s", req.Method, req.URL)
+			return req, nil
+		}
+		// 检查请求头部是否匹配黑名单
+		if checkHeaders(req.Header, blackListRegexes) {
+			bwLogger.Printf("黑名单匹配（请求头）: %s %s", req.Method, req.URL)
+			resp := goproxy.NewResponse(req, goproxy.ContentTypeText, http.StatusForbidden, "Blocked by proxy filter (blacklist matched)")
+			return req, resp
+		}
+
 		// 优先检查白名单：匹配则直接放行
 		for _, re := range whiteListRegexes {
 			if re.MatchString(payload) {
-				bwLogger.Printf("白名单匹配（请求）: %s %s, 正则：%s", req.Method, req.URL, re.String())
+				bwLogger.Printf("白名单匹配（请求体）: %s %s, 正则：%s", req.Method, req.URL, re.String())
 				return req, nil
 			}
 		}
 		// 检查黑名单：匹配则丢弃报文（返回 403 响应）
 		for _, re := range blackListRegexes {
 			if re.MatchString(payload) {
-				bwLogger.Printf("黑名单匹配（请求）: %s %s, 正则：%s", req.Method, req.URL, re.String())
+				bwLogger.Printf("黑名单匹配（请求体）: %s %s, 正则：%s", req.Method, req.URL, re.String())
 				resp := goproxy.NewResponse(req, goproxy.ContentTypeText, http.StatusForbidden, "Blocked by proxy filter (blacklist matched)")
 				return req, resp
 			}
@@ -142,18 +169,29 @@ func StartProxy() {
 			resp.Body = io.NopCloser(bytes.NewBuffer([]byte(payload)))
 		}
 
+		// 检查响应头部是否匹配黑白名单
+		if checkHeaders(resp.Header, whiteListRegexes) {
+			bwLogger.Printf("白名单匹配（响应头）: %s", resp.Request.URL)
+			return resp
+		}
+		// 检查响应头部是否匹配黑名单
+		if checkHeaders(resp.Header, blackListRegexes) {
+			bwLogger.Printf("黑名单匹配（响应头）: %s", resp.Request.URL)
+			newResp := goproxy.NewResponse(resp.Request, goproxy.ContentTypeText, http.StatusForbidden, "Blocked by proxy filter (blacklist matched)")
+			return newResp
+		}
+
 		// 优先检查白名单：匹配则直接放行
 		for _, re := range whiteListRegexes {
 			if re.MatchString(payload) {
-				bwLogger.Printf("白名单匹配（响应）: %s, 正则：%s", resp.Request.URL, re.String())
+				bwLogger.Printf("白名单匹配（响应体）: %s, 正则：%s", resp.Request.URL, re.String())
 				return resp
 			}
 		}
-
 		// 检查黑名单：匹配则丢弃报文（返回 403 响应）
 		for _, re := range blackListRegexes {
 			if re.MatchString(payload) {
-				bwLogger.Printf("黑名单匹配（响应）: %s, 正则：%s", resp.Request.URL, re.String())
+				bwLogger.Printf("黑名单匹配（响应体）: %s, 正则：%s", resp.Request.URL, re.String())
 				newResp := goproxy.NewResponse(resp.Request, goproxy.ContentTypeText, http.StatusForbidden, "Blocked by proxy filter (blacklist matched)")
 				return newResp
 			}
@@ -165,6 +203,6 @@ func StartProxy() {
 	proxy.OnRequest().HandleConnect(goproxy.AlwaysMitm)
 
 	// 启动代理服务器
-	log.Println("代理服务器运行在 :8800")
-	log.Fatal(http.ListenAndServe(":8800", proxy))
+	log.Println("代理服务器运行在 :8899")
+	log.Fatal(http.ListenAndServe(":8899", proxy))
 }

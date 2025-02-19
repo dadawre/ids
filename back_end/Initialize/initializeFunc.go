@@ -8,6 +8,7 @@ import (
 	"graduationDesign/back_end/List"
 	"graduationDesign/back_end/Parser/ParserConfig"
 	"graduationDesign/back_end/Parser/ParserRuler"
+	"graduationDesign/back_end/Proxy"
 	"graduationDesign/back_end/Structure"
 	"log"
 	"os"
@@ -30,6 +31,7 @@ func MainInitialize() {
 	EmailInitialize()              //邮件发送
 	WhiteAndBlackListInitialize()  //黑白名单
 	SQLInitialize()                //SQL管理
+	ProxyInitialize()              // Proxy代理
 }
 
 func ConfigInitialize() {
@@ -131,17 +133,18 @@ func TerminateParameterInitialize() {
 }
 
 func BashScriptInitialize() {
+
 	cmd := exec.Command("/bin/bash", Parameter.InitBanIpShPath)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Println("Error:", err)
+		fmt.Println("Initialize Ban Ip Error:", err)
 	}
 	fmt.Println("Output:", string(output))
 
 	cmd = exec.Command("/bin/bash", Parameter.InitBanIpNetWorkShPath)
 	output, err = cmd.CombinedOutput()
 	if err != nil {
-		fmt.Println("Error:", err)
+		fmt.Println("Initialze Ban IPNetwork Error:", err)
 	}
 	fmt.Println("Output:", string(output))
 
@@ -149,6 +152,13 @@ func BashScriptInitialize() {
 	output, err = cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("Initialize White Set Error:", err)
+	}
+	fmt.Println("Output:", string(output))
+
+	cmd = exec.Command("/bin/bash", Parameter.InitBanPortShPath)
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Initialize BanPort Set Error:", err)
 	}
 	fmt.Println("Output:", string(output))
 
@@ -163,38 +173,48 @@ func BashScriptInitialize() {
 
 // EndConduction 程序结束时执行的函数
 func EndConduction() {
+
 	//保存ip_ban集合的ipset配置
 	cmd := exec.Command("/bin/bash", Parameter.SaveBanIpShPath, Parameter.BanIpConfigSavePath)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Println("Error:", err)
+		fmt.Println("Ban Ip Error:", err)
 	}
 	// 打印脚本的输出
 	fmt.Println("ip_ban save output:", string(output))
 
-	//保存ip_ban集合的ipset配置
+	//保存ip_ban_network集合的ipset配置
 	cmd = exec.Command("/bin/bash", Parameter.SaveBanIpNetworkShPath, Parameter.BanIpNetworkConfigSavePath)
 	output, err = cmd.CombinedOutput()
 	if err != nil {
-		fmt.Println("Error:", err)
+		fmt.Println("Ban IP Network Error:", err)
 	}
 	// 打印脚本的输出
 	fmt.Println("ip_network_ban save output:", string(output))
 
-	//保存ip_ban集合的ipset配置
+	//保存white list 集合的ipset配置
 	cmd = exec.Command("/bin/bash", Parameter.SaveWhiteListShPath, Parameter.WhiteListSavePath)
 	output, err = cmd.CombinedOutput()
 	if err != nil {
-		fmt.Println("Error:", err)
+		fmt.Println("White List Error:", err)
 	}
 	// 打印脚本的输出
 	fmt.Println("white list save output:", string(output))
 
-	//保存ip_ban集合的ipset配置
+	//保存white list network 集合的ipset配置
 	cmd = exec.Command("/bin/bash", Parameter.SaveWhiteListNetworkShPath, Parameter.WhiteListNetworkSavePath)
 	output, err = cmd.CombinedOutput()
 	if err != nil {
-		fmt.Println("Error:", err)
+		fmt.Println("White List Network Error:", err)
+	}
+	// 打印脚本的输出
+	fmt.Println("white list network save output:", string(output))
+
+	//保存ban port network 集合的ipset配置
+	cmd = exec.Command("/bin/bash", Parameter.SaveBanPortShPath, Parameter.BanPortSavePath)
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Ban port  Network Error:", err)
 	}
 	// 打印脚本的输出
 	fmt.Println("white list network save output:", string(output))
@@ -203,13 +223,13 @@ func EndConduction() {
 	cmd = exec.Command("/bin/bash", Parameter.SaveIptablesShPath, Parameter.IptablesConfigSavePath)
 	output, err = cmd.CombinedOutput()
 	if err != nil {
-		fmt.Println("Error:", err)
+		fmt.Println("Iptables Error:", err)
 	}
 	// 打印脚本的输出
 	fmt.Println("iptables output:", string(output))
 
 	//ipset清空
-	cmd = exec.Command("/bin/bash", "ipset flush")
+	cmd = exec.Command("ipset", "flush")
 	output, err = cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -256,6 +276,7 @@ func EmailInitialize() {
 }
 
 func WhiteAndBlackListInitialize() {
+	fmt.Printf("white black")
 	// 示例用法
 	_, _ = List.LoadAccessList(Parameter.WhiteListPath, true, InitializeStructure.BlackWhiteList)
 	_, _ = List.LoadAccessList(Parameter.BlackListPath, false, InitializeStructure.BlackWhiteList)
@@ -296,5 +317,13 @@ func SQLInitialize() {
 		if err := InitializeStructure.LogSQLManager.CreateTable(fullPathTableName); err != nil {
 			log.Fatalf("创建表失败: %v", err)
 		}
+	}
+}
+
+func ProxyInitialize() {
+	if Parameter.StartProxy == 1 {
+		go func() {
+			Proxy.StartProxy()
+		}()
 	}
 }

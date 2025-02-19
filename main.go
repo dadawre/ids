@@ -14,10 +14,12 @@ import (
 )
 
 func main() {
+	//参数初始化
 	Initialize.MainInitialize()
+	//终端规则监听
 	Control.RulerInputListen()
 
-	go func() { //前端请求监控
+	go func() { //前端请求API
 		Network.InitializeNetwork()
 	}()
 

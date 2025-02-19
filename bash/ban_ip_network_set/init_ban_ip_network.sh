@@ -3,7 +3,7 @@
 # 检查是否存在名为 ban_ip 的 ipset 集合
 if ! ipset list ban_ip_network &>/dev/null; then
     echo "创建 ipset 集合 ban_ip_network..."
-    ipset create ban_ip hash:net
+    ipset create ban_ip_network hash:net
 else
     echo "ipset 集合 ban_ip_network 已存在."
 fi

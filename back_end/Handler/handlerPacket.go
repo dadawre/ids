@@ -122,6 +122,7 @@ func (p *PacketHandler) PayloadMatch() {
 			}
 		}
 
+		//规则匹配结果
 		result, err := RuleMatch.EvaluateExpression(p.ruleBools, node.RuleValue.Operators)
 		//if err != nil {
 		//	fmt.Printf("Error executing result: %v\n", err)
@@ -136,8 +137,10 @@ func (p *PacketHandler) PayloadMatch() {
 		//}
 
 		if result {
+			//获取action函数
 			actionFunc, exists := p.packetActionMap[node.RuleValue.Action]
 			if exists {
+				//执行action函数
 				actionFunc(node.RuleValue)
 			} else {
 				fmt.Printf("No action function for action: %d\n", node.RuleValue.Action)
