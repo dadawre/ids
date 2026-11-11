@@ -1,4 +1,4 @@
-# IDS
+# PacketListener · 网络流量监测与入侵检测
 
 一个用 Go 实现的网络入侵检测系统（IDS），配有 Next.js 管理界面。选择网卡后，可以实时抓包，也可以按自定义规则匹配流量、记录事件、发送告警或封禁来源 IP。管理界面可用于查看日志、编辑规则和维护黑白名单。
 
@@ -12,8 +12,8 @@
 
 ```bash
 sudo apt install build-essential libpcap-dev iptables ipset
-git clone https://github.com/dadawre/ids.git
-cd ids
+git clone https://github.com/dadawre/packet-listener.git
+cd packet-listener
 ```
 
 启动前，编辑 [conf/ids.conf](conf/ids.conf) 中的 `config { ... }`。
@@ -38,8 +38,8 @@ sudo ./ids
 准备 Node.js 20 或更高版本和 npm，在另一个终端中运行以下命令。
 
 ```bash
-git clone --branch master --single-branch https://github.com/dadawre/ids.git ids-ui
-cd ids-ui
+git clone --branch master --single-branch https://github.com/dadawre/packet-listener.git packet-listener-ui
+cd packet-listener-ui
 npm ci
 npm run dev -- --hostname 127.0.0.1
 ```
@@ -110,4 +110,4 @@ IPv4 src $labNetwork & ( TCP dst 80 | TCP dst 443 ) priority 5 action record nam
 | [`conf/`](conf/) | 主配置、黑白名单和防火墙配置。 |
 | [`rulers/`](rulers/) | 检测规则示例。 |
 | [`bash/`](bash/) | 初始化和维护 `iptables`、`ipset` 的脚本。 |
-| [`master` 分支](https://github.com/dadawre/ids/tree/master) | Next.js 管理界面源码。 |
+| [`master` 分支](https://github.com/dadawre/packet-listener/tree/master) | Next.js 管理界面源码。 |
